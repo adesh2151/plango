@@ -64,15 +64,6 @@ export default function Home({ onOpen, onOpenDest, onBuild, onStartTrip }) {
     }
   }
 
-  if (buildingTpl) {
-    return (
-      <div style={{ paddingTop: 60 }}>
-        <Loading label={`Building your ${buildingTpl} trip…`} />
-        <div className="muted small center" style={{ marginTop: 8 }}>Fetching live places for each city — a few seconds.</div>
-      </div>
-    )
-  }
-
   const sortedTrips = useMemo(() => {
     const arr = [...trips]
     if (tripSort === 'name') arr.sort((a, b) => a.name.localeCompare(b.name))
@@ -82,6 +73,16 @@ export default function Home({ onOpen, onOpenDest, onBuild, onStartTrip }) {
   }, [trips, tripSort])
 
   const activeCat = CATEGORIES.find((c) => c.key === theme)
+
+  // Placed after all hooks so hook order stays stable (Rules of Hooks).
+  if (buildingTpl) {
+    return (
+      <div style={{ paddingTop: 60 }}>
+        <Loading label={`Building your ${buildingTpl} trip…`} />
+        <div className="muted small center" style={{ marginTop: 8 }}>Fetching live places for each city — a few seconds.</div>
+      </div>
+    )
+  }
 
   return (
     <div>
