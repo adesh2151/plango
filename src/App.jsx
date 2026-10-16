@@ -17,6 +17,18 @@ const NAV = [
 export default function App() {
   const [nav, setNav] = useState('trips')
   const [tripId, setTripId] = useState(null)
+  const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine)
+
+  useEffect(() => {
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => {
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+    }
+  }, [])
 
   const openTrip = (id) => {
     setTripId(id)
@@ -55,6 +67,8 @@ export default function App() {
           <div className="sub">Plan it, then go — itinerary, costs, places & visas.</div>
         </div>
       </header>
+
+      {!online && <div className="offline-banner">📴 Offline — showing your saved trips &amp; last-seen data</div>}
 
       {nav === 'trips' && !tripId && <Home onOpen={openTrip} onStartTrip={startTripFromSuggestion} />}
       {showTrip && <TripScreen tripId={tripId} onBack={() => setTripId(null)} />}

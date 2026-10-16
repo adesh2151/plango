@@ -7,6 +7,33 @@
 
 const ENDPOINT = 'https://text.pollinations.ai/'
 
+// Ask the AI to recommend the best city (from our real Wikivoyage list) for the
+// traveller's interests. Grounded: the answer must be one of the given cities.
+export async function pickCity({ region, cities, interests = [], days = 3 }) {
+  const names = cities.map((c) => c.name)
+  const prompt =
+    `I'm planning a ${days}-day trip to ${region} and I like: ${interests.join(', ') || 'general sightseeing'}. ` +
+    `Which ONE of these cities is the best base for that? Reply with ONLY the city name, exactly as written, ` +
+    `chosen from this list: ${names.join('; ')}.`
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 28000)
+  let text
+  try {
+    const res = await fetch(ENDPOINT + encodeURIComponent(prompt), { signal: ctrl.signal })
+    if (!res.ok) throw new Error(`AI ${res.status}`)
+    text = await res.text()
+  } finally {
+    clearTimeout(timer)
+  }
+  const n = norm(text)
+  const match =
+    cities.find((c) => norm(c.name) === n) ||
+    cities.find((c) => n.includes(norm(c.name))) ||
+    cities.find((c) => norm(c.name).includes(n))
+  if (!match) throw new Error('AI did not return a known city')
+  return match
+}
+
 export async function refineDays({ place, days, interests = [], places }) {
   const names = places.map((p) => p.name)
   const prompt =

@@ -28,6 +28,14 @@ export const BUDGET_TIERS = {
   luxury: { label: 'Luxury', perDay: 260 },
 }
 
+// Indicative share of daily spend by category (very rough, editable by user).
+export const BUDGET_SPLIT = [
+  { key: 'stay', label: 'Stay', emoji: '🏨', pct: 0.42 },
+  { key: 'food', label: 'Food', emoji: '🍽️', pct: 0.26 },
+  { key: 'transport', label: 'Local transport', emoji: '🚕', pct: 0.16 },
+  { key: 'activities', label: 'Activities', emoji: '🎟️', pct: 0.16 },
+]
+
 function matchesInterest(place, interests) {
   const hay = `${place.name} ${place.kind}`.toLowerCase()
   return interests.some((i) => (INTEREST_KEYWORDS[i] || []).some((k) => hay.includes(k)))

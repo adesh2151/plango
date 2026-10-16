@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useStore, createTrip, addItem } from '../lib/store.js'
 import { allCountries } from '../lib/countries.js'
 import { convertOne } from '../lib/currency.js'
-import { generatePlan, BUDGET_TIERS } from '../lib/itinerary.js'
-import { refineDays } from '../lib/ai.js'
+import { generatePlan, BUDGET_TIERS, BUDGET_SPLIT } from '../lib/itinerary.js'
+import { refineDays, pickCity as aiPickCity } from '../lib/ai.js'
 import { uid, fmtDate, money } from '../lib/format.js'
 import { INTERESTS } from './Settings.jsx'
 import { PlaceImage, Loading, ErrorBox, Field, useAsync } from './ui.jsx'
@@ -73,6 +73,19 @@ export default function TripBuilder({ onClose, onCreated, profile }) {
     const q = `${c.name}, ${c.region}`
     setQuery(q)
     generate(q, false)
+  }
+
+  const letAiPickCity = async () => {
+    if (!state.plan?.region) return
+    setAiBusy(true)
+    try {
+      const c = await aiPickCity({ region: state.plan.place, cities: state.plan.cities, interests, days })
+      setAiBusy(false)
+      pickCity(c)
+    } catch {
+      setAiBusy(false)
+      alert('AI is busy — pick a city yourself for now.')
+    }
   }
 
   const save = () => {
@@ -167,11 +180,14 @@ export default function TripBuilder({ onClose, onCreated, profile }) {
         <div className="card">
           <div style={{ fontWeight: 700, marginBottom: 4 }}>📍 {state.plan.place} is a big area</div>
           <div className="small muted" style={{ marginBottom: 10 }}>Pick a city and I’ll build your {days}-day plan there:</div>
-          <div className="row wrap">
+          <div className="row wrap" style={{ marginBottom: 10 }}>
             {state.plan.cities.map((c) => (
               <span key={c.name} className="chip" style={{ cursor: 'pointer' }} onClick={() => pickCity(c)}>{c.name}</span>
             ))}
           </div>
+          <button className="btn primary block" onClick={letAiPickCity} disabled={aiBusy}>
+            {aiBusy ? '🤖 AI is choosing the best city…' : '🤖 Can’t decide? Let AI pick for me'}
+          </button>
         </div>
       )}
 
@@ -188,7 +204,14 @@ export default function TripBuilder({ onClose, onCreated, profile }) {
                 <div className="small muted">indicative*</div>
               </div>
             </div>
-            <div className="small muted" style={{ marginTop: 6 }}>*Rough on-ground estimate ({BUDGET_TIERS[tier].label}); real costs vary — no open cost database exists.</div>
+            {estimate != null && (
+              <div className="row wrap" style={{ gap: 8, marginTop: 12 }}>
+                {BUDGET_SPLIT.map((b) => (
+                  <span className="chip" key={b.key}>{b.emoji} {b.label}: {money(estimate * b.pct, profile.homeCurrency || 'USD')}</span>
+                ))}
+              </div>
+            )}
+            <div className="small muted" style={{ marginTop: 10 }}>*Rough on-ground estimate ({BUDGET_TIERS[tier].label}, excl. flights); real costs vary — no open cost database exists.</div>
           </div>
 
           {state.plan.days.map((dayPlaces, i) => (
