@@ -30,17 +30,23 @@ export default function TripBuilder({ onClose, onCreated, profile, initialQuery 
   const [state, setState] = useState({ loading: false, error: null, plan: null })
   const [estimate, setEstimate] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
+  const [aiNote, setAiNote] = useState('')
   const { data: countries } = useAsync(() => allCountries(), [])
 
   const aiOptimise = async () => {
     if (!state.plan) return
     setAiBusy(true)
+    setAiNote('')
     try {
       const flat = state.plan.days.flat()
       const newDays = await refineDays({ place: state.plan.place, days, interests, places: flat })
       setState((s) => ({ ...s, plan: { ...s.plan, days: newDays, ai: true } }))
-    } catch {
-      alert('AI is busy right now — keeping your current plan. Try again in a moment.')
+    } catch (e) {
+      setAiNote(
+        e.message === 'RATE_LIMIT'
+          ? 'Free AI allows ~1 request every 30 seconds. Please wait ~30s and tap again — meanwhile your plan is already grouped by location.'
+          : 'The free AI is busy right now — your plan is already grouped by location, so it’s good to go. Try again in a moment.',
+      )
     } finally {
       setAiBusy(false)
     }
@@ -229,6 +235,7 @@ export default function TripBuilder({ onClose, onCreated, profile, initialQuery 
           <button className="btn block" style={{ marginTop: 8 }} onClick={aiOptimise} disabled={aiBusy}>
             {aiBusy ? '✨ AI is optimising your plan…' : state.plan.ai ? '✨ Re-optimise with AI' : '✨ Optimise with AI (free · adds tips)'}
           </button>
+          {aiNote && <div className="small muted" style={{ marginTop: 6, textAlign: 'center' }}>{aiNote}</div>}
           <div className="row" style={{ marginTop: 8 }}>
             <button className="btn grow" onClick={() => generate()}>🔀 Regenerate</button>
             <button className="btn primary grow" onClick={save}>💾 Save as trip</button>
