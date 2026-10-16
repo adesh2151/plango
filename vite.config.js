@@ -16,7 +16,7 @@ export default defineConfig({
         // with the last-seen values. The app shell is precached.
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\.frankfurter\.(app|dev)\/.*/i,
+            urlPattern: /^https:\/\/open\.er-api\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'fx-rates', expiration: { maxEntries: 50, maxAgeSeconds: 86400 } },
           },
@@ -42,7 +42,7 @@ export default defineConfig({
             options: { cacheName: 'wiki-img', expiration: { maxEntries: 200, maxAgeSeconds: 604800 } },
           },
           {
-            urlPattern: /^https:\/\/(photon\.komoot\.io|overpass[.-])/i,
+            urlPattern: /^https:\/\/(geocoding-api\.open-meteo\.com|overpass[.-])/i,
             handler: 'NetworkFirst',
             options: { cacheName: 'places', expiration: { maxEntries: 100, maxAgeSeconds: 604800 } },
           },

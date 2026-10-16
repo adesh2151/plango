@@ -44,7 +44,8 @@ export default function Settings() {
       <div className="card small soft">
         <p style={{ marginTop: 0 }}>Everything is live, open data. Your trips and keys never leave your device.</p>
         <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.9 }}>
-          <li>Exchange rates — frankfurter.app (ECB)</li>
+          <li>Exchange rates — ExchangeRate-API (open.er-api.com)</li>
+          <li>Geocoding — Open-Meteo</li>
           <li>Country facts — mledoze/countries (ODbL)</li>
           <li>Visa rules — Passport Index dataset, ilyankou (ODbL)</li>
           <li>Places — © OpenStreetMap contributors (ODbL)</li>
