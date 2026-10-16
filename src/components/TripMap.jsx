@@ -1,6 +1,8 @@
+import { Suspense, lazy } from 'react'
 import { geocode } from '../lib/places.js'
 import { Loading, Empty, useAsync } from './ui.jsx'
-import MapView from './MapView.jsx'
+
+const MapView = lazy(() => import('./MapView.jsx'))
 
 const FAV_EMOJI = { hotel: '🏨', restaurant: '🍽️', dish: '🍽️', spot: '📸' }
 
@@ -37,7 +39,9 @@ export default function TripMap({ trip }) {
         <Empty icon="🗺️" title="Nothing to map yet" hint="Add destinations, or save places from Explore, to see them on the map." />
       ) : (
         <>
-          <MapView points={points} />
+          <Suspense fallback={<Loading label="Loading map…" />}>
+            <MapView points={points} />
+          </Suspense>
           <div className="row wrap" style={{ gap: 10, marginTop: 10 }}>
             <span className="chip">📍 Destinations</span>
             <span className="chip">⭐ Saved places</span>

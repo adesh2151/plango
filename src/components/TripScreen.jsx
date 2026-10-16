@@ -64,6 +64,22 @@ export default function TripScreen({ tripId, onBack }) {
         </div>
       </div>
 
+      <div className="card tight" style={{ marginBottom: 14 }}>
+        <div className="row">
+          <div className="stat"><div className="v">{trip.startDate ? daysBetween(trip.startDate, trip.endDate) : '—'}</div><div className="l">days</div></div>
+          <div className="stat"><div className="v">{trip.items.length}</div><div className="l">stops</div></div>
+          <div className="stat"><div className="v">{trip.favorites.length}</div><div className="l">saved</div></div>
+          <div className="stat"><div className="v">{trip.travelers.length}</div><div className="l">people</div></div>
+          {trip.budget > 0 && <div className="stat"><div className="v" style={{ fontSize: 15 }}>{trip.baseCurrency} {trip.budget}</div><div className="l">budget</div></div>}
+        </div>
+        {(() => {
+          const today = new Date().toISOString().slice(0, 10)
+          const sorted = [...trip.items].filter((i) => i.date).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
+          const next = sorted.find((i) => i.date >= today) || sorted[0] || trip.items[0]
+          return next ? <div className="small soft" style={{ marginTop: 10, textAlign: 'center' }}>⏭️ Next: <b>{next.title}</b>{next.date ? ` · ${fmtDate(next.date)}` : ''}</div> : null
+        })()}
+      </div>
+
       <div className="tabbar">
         {TABS.map((t) => (
           <button key={t.key} className={tab === t.key ? 'on' : ''} onClick={() => setTab(t.key)}>{t.label}</button>

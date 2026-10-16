@@ -26,8 +26,8 @@ const addDays = (iso, n) => {
   return d.toISOString().slice(0, 10)
 }
 
-export default function TripBuilder({ onClose, onCreated, profile }) {
-  const [query, setQuery] = useState('')
+export default function TripBuilder({ onClose, onCreated, profile, initialQuery = '' }) {
+  const [query, setQuery] = useState(initialQuery)
   const [days, setDays] = useState(3)
   const [interests, setInterests] = useState(profile.interests || [])
   const [tier, setTier] = useState('mid')

@@ -4,7 +4,10 @@ import Home from './components/Home.jsx'
 import TripScreen from './components/TripScreen.jsx'
 import Discover from './components/Discover.jsx'
 import Settings from './components/Settings.jsx'
-import { createTrip, importTripObject } from './lib/store.js'
+import Onboarding from './components/Onboarding.jsx'
+import DestinationPage from './components/DestinationPage.jsx'
+import TripBuilder from './components/TripBuilder.jsx'
+import { useStore, createTrip, importTripObject } from './lib/store.js'
 import { uid } from './lib/format.js'
 import { readSharedTrip } from './lib/share.js'
 
@@ -15,8 +18,11 @@ const NAV = [
 ]
 
 export default function App() {
+  const { profile } = useStore()
   const [nav, setNav] = useState('trips')
   const [tripId, setTripId] = useState(null)
+  const [dest, setDest] = useState(null) // destination query string
+  const [builder, setBuilder] = useState(null) // null | { query }
   const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine)
 
   useEffect(() => {
@@ -30,12 +36,10 @@ export default function App() {
     }
   }, [])
 
-  const openTrip = (id) => {
-    setTripId(id)
-    setNav('trips')
-  }
+  const openTrip = (id) => { setDest(null); setBuilder(null); setTripId(id); setNav('trips') }
+  const openDest = (q) => { setBuilder(null); setDest(q); window.scrollTo(0, 0) }
+  const openBuilder = (q = '') => { setDest(null); setBuilder({ query: q }) }
 
-  // A shared trip link (#t=...) opens a copy of that plan.
   useEffect(() => {
     const shared = readSharedTrip()
     if (shared && confirm(`Open shared trip “${shared.name}”? A copy will be saved to your trips.`)) {
@@ -49,14 +53,20 @@ export default function App() {
     const id = createTrip({
       name: `Trip to ${city || country.name}`,
       coverCca2: country.cca2,
-      destinations: [
-        { id: uid(), country: { name: country.name, cca2: country.cca2, cca3: country.cca3, flag: country.flag }, city },
-      ],
+      destinations: [{ id: uid(), country: { name: country.name, cca2: country.cca2, cca3: country.cca3, flag: country.flag }, city }],
     })
     openTrip(id)
   }
 
-  const showTrip = nav === 'trips' && tripId
+  if (!profile.onboarded) return <div className="app"><Onboarding /></div>
+
+  let content
+  if (builder) content = <TripBuilder initialQuery={builder.query} profile={profile} onClose={() => setBuilder(null)} onCreated={openTrip} />
+  else if (dest) content = <DestinationPage query={dest} onBack={() => setDest(null)} onOpenDest={openDest} onBuild={openBuilder} onStartTrip={startTripFromSuggestion} />
+  else if (nav === 'trips' && tripId) content = <TripScreen tripId={tripId} onBack={() => setTripId(null)} />
+  else if (nav === 'trips') content = <Home onOpen={openTrip} onOpenDest={openDest} onBuild={openBuilder} onStartTrip={startTripFromSuggestion} />
+  else if (nav === 'discover') content = <Discover onStartTrip={startTripFromSuggestion} onOpenDest={openDest} />
+  else content = <Settings />
 
   return (
     <div className="app">
@@ -70,20 +80,14 @@ export default function App() {
 
       {!online && <div className="offline-banner">📴 Offline — showing your saved trips &amp; last-seen data</div>}
 
-      {nav === 'trips' && !tripId && <Home onOpen={openTrip} onStartTrip={startTripFromSuggestion} />}
-      {showTrip && <TripScreen tripId={tripId} onBack={() => setTripId(null)} />}
-      {nav === 'discover' && <Discover onStartTrip={startTripFromSuggestion} />}
-      {nav === 'settings' && <Settings />}
+      {content}
 
       <nav className="bottomnav">
         {NAV.map((n) => (
           <button
             key={n.key}
-            className={nav === n.key ? 'on' : ''}
-            onClick={() => {
-              setNav(n.key)
-              if (n.key === 'trips') setTripId(null)
-            }}
+            className={nav === n.key && !dest && !builder ? 'on' : ''}
+            onClick={() => { setNav(n.key); setDest(null); setBuilder(null); if (n.key === 'trips') setTripId(null) }}
           >
             <span className="ico">{n.ico}</span>
             {n.label}

@@ -7,9 +7,10 @@ import { uid } from './format.js'
 const KEY = 'safar-mitra-v1'
 
 const EMPTY = {
-  profile: { name: '', passportCca3: '', homeCurrency: 'USD' },
+  profile: { name: '', passportCca3: '', homeCurrency: 'USD', interests: [], onboarded: false },
   settings: { amadeusId: '', amadeusSecret: '', amadeusProduction: false },
   trips: [],
+  wishlist: [],
 }
 
 let state = load()
@@ -91,6 +92,16 @@ export function importTripObject(trip) {
   }
   set({ ...state, trips: [copy, ...state.trips] })
   return copy.id
+}
+
+// ---- wishlist (saved destinations) ----
+export function toggleWishlist(dest) {
+  const exists = state.wishlist.find((w) => w.key === dest.key)
+  if (exists) set({ ...state, wishlist: state.wishlist.filter((w) => w.key !== dest.key) })
+  else set({ ...state, wishlist: [{ ...dest }, ...state.wishlist] })
+}
+export function isWished(key) {
+  return state.wishlist.some((w) => w.key === key)
 }
 
 // ---- trips ----
