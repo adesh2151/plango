@@ -48,7 +48,7 @@ export default function App() {
         </div>
       </header>
 
-      {nav === 'trips' && !tripId && <Home onOpen={openTrip} />}
+      {nav === 'trips' && !tripId && <Home onOpen={openTrip} onStartTrip={startTripFromSuggestion} />}
       {showTrip && <TripScreen tripId={tripId} onBack={() => setTripId(null)} />}
       {nav === 'discover' && <Discover onStartTrip={startTripFromSuggestion} />}
       {nav === 'world' && <World />}

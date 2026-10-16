@@ -1,65 +1,74 @@
 import { useState } from 'react'
 import { useStore, createTrip } from '../lib/store.js'
-import { fmtDate, daysBetween } from '../lib/format.js'
-import { uid } from '../lib/format.js'
-import { flagImg } from '../lib/countries.js'
-import { Modal, Field, CountryPicker, CurrencyPicker, Empty, PlaceImage } from './ui.jsx'
+import { fmtDate, daysBetween, uid } from '../lib/format.js'
+import { flagImg, allCountries } from '../lib/countries.js'
+import { wikiNearby, reverseGeocode } from '../lib/places.js'
+import { Modal, Field, CountryPicker, CurrencyPicker, Empty, PlaceImage, useAsync } from './ui.jsx'
 
-export default function Home({ onOpen }) {
+// Editorial inspiration list — just names; the photo & info are fetched live.
+const TRENDING = [
+  { city: 'Paris', country: 'France' },
+  { city: 'Tokyo', country: 'Japan' },
+  { city: 'Bali', country: 'Indonesia' },
+  { city: 'Dubai', country: 'United Arab Emirates' },
+  { city: 'Rome', country: 'Italy' },
+  { city: 'Singapore', country: 'Singapore' },
+  { city: 'London', country: 'United Kingdom' },
+  { city: 'New York', country: 'United States' },
+  { city: 'Bangkok', country: 'Thailand' },
+  { city: 'Cape Town', country: 'South Africa' },
+]
+
+export default function Home({ onOpen, onStartTrip }) {
   const { trips, profile } = useStore()
   const [creating, setCreating] = useState(false)
+  const { data: countries } = useAsync(() => allCountries(), [])
+
+  const findCountry = (name, code) =>
+    (countries || []).find((c) => c.cca2 === code || c.name === name) ||
+    (countries || []).find((c) => c.name.toLowerCase().includes((name || '').toLowerCase()))
+
+  const startByName = (city, countryName) => {
+    const c = findCountry(countryName)
+    if (c) onStartTrip(c, city)
+    else setCreating(true)
+  }
 
   return (
     <div>
-      <div className="row between" style={{ margin: '4px 2px 12px' }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Your trips</h2>
-          <div className="muted small">
-            {trips.length ? `${trips.length} planned` : 'Start planning your next journey'}
-          </div>
+      {/* HERO */}
+      <div className="hero">
+        <PlaceImage query="Paris" className="heroimg" />
+        <div className="heroveil" />
+        <div className="hcontent">
+          <div className="eyebrow">Plan it, then go ✈</div>
+          <h2>Where to next{profile.name ? `, ${profile.name}` : ''}?</h2>
+          <p>Build an itinerary, split costs with friends, and discover places — all with live info.</p>
+          <button className="btn primary" onClick={() => setCreating(true)}>✨ Plan a trip</button>
         </div>
-        <button className="btn primary" onClick={() => setCreating(true)}>
-          ＋ New trip
-        </button>
       </div>
 
-      {!trips.length && (
-        <Empty
-          icon="✈️"
-          title="No trips yet"
-          hint="Create a trip, add destinations, and plan days, budget, places and visas — all with live data."
-        />
-      )}
+      {/* NEAR YOU */}
+      <NearYou onStartTrip={onStartTrip} findCountry={findCountry} />
 
-      {trips.map((t) => {
-        const dest = t.destinations[0]
-        const cityQuery = dest ? `${dest.city || dest.country?.name}` : t.name
-        return (
-          <div className="card trip-card" key={t.id} onClick={() => onOpen(t.id)}>
-            <PlaceImage query={cityQuery} className="cover" fallback={dest ? flagImg(dest.country?.cca2) : ''}>
-              <div className="veil" />
-              <div className="flagrow">
-                <div className="name">
-                  {t.destinations.map((d) => d.country?.flag).join(' ')} {t.name}
-                </div>
-              </div>
-            </PlaceImage>
-            <div className="meta">
-              <div className="row between">
-                <span className="small soft">
-                  {t.destinations.map((d) => [d.city, d.country?.name].filter(Boolean).join(', ')).join(' · ') ||
-                    'No destinations yet'}
-                </span>
-              </div>
-              <div className="row small muted" style={{ marginTop: 4, gap: 14 }}>
-                <span>📅 {t.startDate ? `${fmtDate(t.startDate)} · ${daysBetween(t.startDate, t.endDate)}d` : 'Dates TBD'}</span>
-                <span>👥 {t.travelers.length}</span>
-                <span>💰 {t.baseCurrency}</span>
-              </div>
-            </div>
+      {/* TRENDING */}
+      <div className="sec-head"><h3>🔥 Trending destinations</h3></div>
+      <div className="hscroll">
+        {TRENDING.map((t) => (
+          <div className="dcard" key={t.city} onClick={() => startByName(t.city, t.country)}>
+            <PlaceImage query={`${t.city} ${t.country}`} className="dimg" />
+            <div className="dmeta"><div className="t">{t.city}</div><div className="s">{t.country}</div></div>
           </div>
-        )
-      })}
+        ))}
+      </div>
+
+      {/* YOUR TRIPS */}
+      <div className="sec-head">
+        <h3>🧳 Your trips</h3>
+        {trips.length > 0 && <button className="link" onClick={() => setCreating(true)}>＋ New</button>}
+      </div>
+      {!trips.length && <Empty icon="🗺️" title="No trips yet" hint="Tap ‘Plan a trip’, or pick a destination above to start instantly." />}
+      {trips.map((t) => <TripCard key={t.id} t={t} onOpen={onOpen} />)}
 
       {creating && (
         <CreateTripModal
@@ -72,6 +81,92 @@ export default function Home({ onOpen }) {
           }}
         />
       )}
+    </div>
+  )
+}
+
+function NearYou({ onStartTrip, findCountry }) {
+  const [s, setS] = useState({ status: 'idle' })
+
+  const discover = () => {
+    if (!navigator.geolocation) return setS({ status: 'error' })
+    setS({ status: 'loading' })
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords
+          const [place, attractions] = await Promise.all([
+            reverseGeocode(latitude, longitude).catch(() => null),
+            wikiNearby(latitude, longitude).catch(() => []),
+          ])
+          setS({ status: 'done', place, attractions })
+        } catch {
+          setS({ status: 'error' })
+        }
+      },
+      (err) => setS({ status: err.code === 1 ? 'denied' : 'error' }),
+      { timeout: 12000, maximumAge: 600000 },
+    )
+  }
+
+  if (s.status === 'idle')
+    return <button className="locbtn" onClick={discover}>📍 Discover attractions near you</button>
+  if (s.status === 'loading')
+    return <div className="loadbox"><div className="spinner" /><span>Finding places around you…</span></div>
+  if (s.status === 'denied')
+    return <div className="locbtn" style={{ cursor: 'pointer' }} onClick={discover}>📍 Location blocked — tap to allow &amp; see what’s nearby</div>
+  if (s.status === 'error')
+    return <button className="locbtn" onClick={discover}>📍 Couldn’t get location — tap to retry</button>
+
+  const place = s.place
+  const label = place ? [place.city, place.country].filter(Boolean).join(', ') : 'you'
+  const plan = () => {
+    const c = place && findCountry(place.country, place.countryCode)
+    if (c) onStartTrip(c, place.city)
+  }
+  return (
+    <>
+      <div className="sec-head">
+        <h3>📍 Near {label}</h3>
+        {place?.country && <button className="link" onClick={plan}>Plan a trip here</button>}
+      </div>
+      {!s.attractions.length ? (
+        <div className="muted small" style={{ padding: '0 2px 10px' }}>No notable spots found right here — try Trending below.</div>
+      ) : (
+        <div className="hscroll">
+          {s.attractions.map((p) => (
+            <div className="dcard" key={p.id} onClick={plan}>
+              <PlaceImage query={p.name} wikipedia={p.wikipedia} fallback={p.image} className="dimg" />
+              <div className="dmeta"><div className="t">{p.name}</div><div className="s">{p.kind || 'Attraction'}</div></div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+function TripCard({ t, onOpen }) {
+  const dest = t.destinations[0]
+  const cityQuery = dest ? dest.city || dest.country?.name : t.name
+  return (
+    <div className="card trip-card" onClick={() => onOpen(t.id)}>
+      <PlaceImage query={cityQuery} className="cover" fallback={dest ? flagImg(dest.country?.cca2) : ''}>
+        <div className="veil" />
+        <div className="flagrow">
+          <div className="name">{t.destinations.map((d) => d.country?.flag).join(' ')} {t.name}</div>
+        </div>
+      </PlaceImage>
+      <div className="meta">
+        <span className="small soft">
+          {t.destinations.map((d) => [d.city, d.country?.name].filter(Boolean).join(', ')).join(' · ') || 'No destinations yet'}
+        </span>
+        <div className="row small muted" style={{ marginTop: 4, gap: 14 }}>
+          <span>📅 {t.startDate ? `${fmtDate(t.startDate)} · ${daysBetween(t.startDate, t.endDate)}d` : 'Dates TBD'}</span>
+          <span>👥 {t.travelers.length}</span>
+          <span>💰 {t.baseCurrency}</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -106,26 +201,15 @@ function CreateTripModal({ onClose, onCreate, defaultCurrency }) {
   }
 
   return (
-    <Modal
-      title="Plan a new trip"
-      onClose={onClose}
-      footer={
-        <button className="btn primary block" onClick={submit}>
-          Create trip
-        </button>
-      }
-    >
+    <Modal title="Plan a new trip" onClose={onClose} footer={<button className="btn primary block" onClick={submit}>Create trip</button>}>
       <Field label="Trip name">
         <input className="input" placeholder="e.g. Europe summer 2026" value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
-
       <Field label="Add destinations">
         <CountryPicker value={country?.cca3} onChange={setCountry} />
         <div className="row" style={{ marginTop: 8 }}>
           <input className="input grow" placeholder="City / region (optional)" value={city} onChange={(e) => setCity(e.target.value)} />
-          <button className="btn" onClick={addDest} disabled={!country}>
-            Add
-          </button>
+          <button className="btn" onClick={addDest} disabled={!country}>Add</button>
         </div>
       </Field>
       {dests.length > 0 && (
@@ -138,23 +222,13 @@ function CreateTripModal({ onClose, onCreate, defaultCurrency }) {
           ))}
         </div>
       )}
-
       <div className="two">
-        <Field label="Start date">
-          <input type="date" className="input" value={start} onChange={(e) => setStart(e.target.value)} />
-        </Field>
-        <Field label="End date">
-          <input type="date" className="input" value={end} min={start} onChange={(e) => setEnd(e.target.value)} />
-        </Field>
+        <Field label="Start date"><input type="date" className="input" value={start} onChange={(e) => setStart(e.target.value)} /></Field>
+        <Field label="End date"><input type="date" className="input" value={end} min={start} onChange={(e) => setEnd(e.target.value)} /></Field>
       </div>
-
       <div className="two">
-        <Field label="Trip currency">
-          <CurrencyPicker value={currency} onChange={setCurrency} />
-        </Field>
-        <Field label="Budget (optional)">
-          <input type="number" className="input" placeholder="0" value={budget} onChange={(e) => setBudget(e.target.value)} />
-        </Field>
+        <Field label="Trip currency"><CurrencyPicker value={currency} onChange={setCurrency} /></Field>
+        <Field label="Budget (optional)"><input type="number" className="input" placeholder="0" value={budget} onChange={(e) => setBudget(e.target.value)} /></Field>
       </div>
     </Modal>
   )

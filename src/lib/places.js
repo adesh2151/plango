@@ -34,6 +34,47 @@ export const CATEGORIES = {
   },
 }
 
+const WIKI_API = 'https://en.wikipedia.org/w/api.php'
+// Non-place articles that geosearch sometimes returns (events at a location).
+const NOT_A_PLACE = /\b(battle|rebellion|siege|war|uprising|massacre|treaty|election|incident|campaign|dynasty|constituency|parliamentary|legislative|assembly)\b/i
+
+// Attractions near a point, straight from Wikipedia — fast, reliable CORS, and
+// each result already carries a photo + description. Great for sightseeing.
+export async function wikiNearby(lat, lon, limit = 28) {
+  const url =
+    `${WIKI_API}?action=query&format=json&origin=*&generator=geosearch` +
+    `&ggscoord=${lat}%7C${lon}&ggsradius=10000&ggslimit=${limit}` +
+    `&prop=pageimages%7Cdescription%7Ccoordinates&piprop=thumbnail&pithumbsize=400`
+  const data = await getJSON(url, { timeout: 12000 })
+  const pages = Object.values(data?.query?.pages || {})
+  return pages
+    .filter((p) => p.coordinates && p.coordinates.length)
+    .filter((p) => !NOT_A_PLACE.test(p.description || ''))
+    .map((p) => ({
+      id: `wiki/${p.pageid}`,
+      name: p.title,
+      category: 'attractions',
+      kind: p.description || '',
+      wikipedia: `en:${p.title}`,
+      image: p.thumbnail?.source || '',
+      lat: p.coordinates[0].lat,
+      lon: p.coordinates[0].lon,
+    }))
+    .sort((a, b) => (b.image ? 1 : 0) - (a.image ? 1 : 0))
+}
+
+// Reverse geocode (coords -> city/state/country) for the "near you" feature.
+export async function reverseGeocode(lat, lon) {
+  const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+  const d = await getJSON(url, { timeout: 12000 })
+  return {
+    city: d.city || d.locality || '',
+    state: d.principalSubdivision || '',
+    country: d.countryName || '',
+    countryCode: d.countryCode || '',
+  }
+}
+
 export async function geocode(query) {
   const q = (query || '').trim()
   if (!q) return null
@@ -107,7 +148,13 @@ export async function nearby(lat, lon, category = 'attractions', radius = 5000) 
 
 export async function explore(query, category = 'attractions') {
   const center = await geocode(query)
-  if (!center) throw new Error(`Couldn't find "${query}"`)
-  const results = await nearby(center.lat, center.lon, category)
+  if (!center) throw new Error(`Couldn't find "${query}" — try a city name.`)
+  // Attractions come from Wikipedia (reliable + photos). Food/stays/nature come
+  // from OpenStreetMap via Overpass, widening the radius if the first pass is empty.
+  if (category === 'attractions') {
+    return { center, results: await wikiNearby(center.lat, center.lon) }
+  }
+  let results = await nearby(center.lat, center.lon, category, 12000)
+  if (!results.length) results = await nearby(center.lat, center.lon, category, 40000)
   return { center, results }
 }

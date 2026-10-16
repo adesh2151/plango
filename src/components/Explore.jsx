@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore, addFavorite, addItem } from '../lib/store.js'
 import { explore, CATEGORIES } from '../lib/places.js'
+import { countryByCode } from '../lib/countries.js'
 import { createAmadeus } from '../lib/amadeus.js'
 import { PlaceImage, Loading, ErrorBox, Empty, Field } from './ui.jsx'
 import { money } from '../lib/format.js'
@@ -24,9 +25,27 @@ export default function Explore({ trip, goSettings }) {
 /* ---------------- Places (OpenStreetMap, free) ---------------- */
 function Places({ trip }) {
   const dest = trip.destinations[0]
-  const [q, setQ] = useState(dest ? [dest.city, dest.country?.name].filter(Boolean).join(', ') : '')
+  const [q, setQ] = useState(dest?.city ? `${dest.city}, ${dest.country?.name}` : '')
   const [cat, setCat] = useState('attractions')
   const [state, setState] = useState({ loading: false, error: null, data: null })
+  const touched = useRef(false)
+
+  // If the destination has no city, default the search to its capital so there
+  // are actually attractions nearby (a country centroid usually has none).
+  useEffect(() => {
+    if (dest && !dest.city && !touched.current) {
+      countryByCode(dest.country?.cca3).then((c) => {
+        if (touched.current || !c) return
+        setQ(c.capital ? `${c.capital}, ${c.name}` : c.name)
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const onEdit = (v) => {
+    touched.current = true
+    setQ(v)
+  }
 
   const run = async (category = cat) => {
     if (!q.trim()) return
@@ -44,7 +63,7 @@ function Places({ trip }) {
       <div className="card">
         <Field label="Explore a city or area">
           <div className="row">
-            <input className="input grow" value={q} placeholder="e.g. Kyoto, Japan" onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run()} />
+            <input className="input grow" value={q} placeholder="e.g. Kyoto, Japan" onChange={(e) => onEdit(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run()} />
             <button className="btn primary" onClick={() => run()}>Search</button>
           </div>
         </Field>
