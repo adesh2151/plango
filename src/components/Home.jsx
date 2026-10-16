@@ -1,9 +1,22 @@
-import { useState } from 'react'
-import { useStore, createTrip } from '../lib/store.js'
+import { useRef, useState } from 'react'
+import { useStore, createTrip, deleteTrip } from '../lib/store.js'
 import { fmtDate, daysBetween, uid } from '../lib/format.js'
 import { flagImg, allCountries } from '../lib/countries.js'
 import { wikiNearby, reverseGeocode } from '../lib/places.js'
 import { Modal, Field, CountryPicker, CurrencyPicker, Empty, PlaceImage, useAsync } from './ui.jsx'
+import TripBuilder from './TripBuilder.jsx'
+
+function Hrow({ children }) {
+  const ref = useRef(null)
+  const by = (d) => ref.current?.scrollBy({ left: d * 230, behavior: 'smooth' })
+  return (
+    <div className="hrow">
+      <button className="harr left" onClick={() => by(-1)} aria-label="Scroll left">‹</button>
+      <div className="hscroll" ref={ref}>{children}</div>
+      <button className="harr right" onClick={() => by(1)} aria-label="Scroll right">›</button>
+    </div>
+  )
+}
 
 // Editorial inspiration list — just names; the photo & info are fetched live.
 const TRENDING = [
@@ -17,12 +30,23 @@ const TRENDING = [
   { city: 'New York', country: 'United States' },
   { city: 'Bangkok', country: 'Thailand' },
   { city: 'Cape Town', country: 'South Africa' },
+  { city: 'Istanbul', country: 'Turkey' },
+  { city: 'Barcelona', country: 'Spain' },
+  { city: 'Kyoto', country: 'Japan' },
+  { city: 'Cairo', country: 'Egypt' },
+  { city: 'Goa', country: 'India' },
+  { city: 'Jaipur', country: 'India' },
+  { city: 'Queenstown', country: 'New Zealand' },
+  { city: 'Lisbon', country: 'Portugal' },
 ]
 
 export default function Home({ onOpen, onStartTrip }) {
   const { trips, profile } = useStore()
   const [creating, setCreating] = useState(false)
+  const [building, setBuilding] = useState(false)
   const { data: countries } = useAsync(() => allCountries(), [])
+
+  if (building) return <TripBuilder profile={profile} onClose={() => setBuilding(false)} onCreated={(id) => { setBuilding(false); onOpen(id) }} />
 
   const findCountry = (name, code) =>
     (countries || []).find((c) => c.cca2 === code || c.name === name) ||
@@ -43,8 +67,11 @@ export default function Home({ onOpen, onStartTrip }) {
         <div className="hcontent">
           <div className="eyebrow">Plan it, then go ✈</div>
           <h2>Where to next{profile.name ? `, ${profile.name}` : ''}?</h2>
-          <p>Build an itinerary, split costs with friends, and discover places — all with live info.</p>
-          <button className="btn primary" onClick={() => setCreating(true)}>✨ Plan a trip</button>
+          <p>Tell me where &amp; how many days — I’ll build a day-by-day plan. Or start from scratch.</p>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn primary" onClick={() => setBuilding(true)}>✨ Build my trip</button>
+            <button className="btn ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,.6)' }} onClick={() => setCreating(true)}>Start blank</button>
+          </div>
         </div>
       </div>
 
@@ -52,15 +79,15 @@ export default function Home({ onOpen, onStartTrip }) {
       <NearYou onStartTrip={onStartTrip} findCountry={findCountry} />
 
       {/* TRENDING */}
-      <div className="sec-head"><h3>🔥 Trending destinations</h3></div>
-      <div className="hscroll">
+      <div className="sec-head"><h3>🔥 Trending destinations</h3><button className="link" onClick={() => setBuilding(true)}>Plan one →</button></div>
+      <Hrow>
         {TRENDING.map((t) => (
           <div className="dcard" key={t.city} onClick={() => startByName(t.city, t.country)}>
             <PlaceImage query={`${t.city} ${t.country}`} className="dimg" />
             <div className="dmeta"><div className="t">{t.city}</div><div className="s">{t.country}</div></div>
           </div>
         ))}
-      </div>
+      </Hrow>
 
       {/* YOUR TRIPS */}
       <div className="sec-head">
@@ -133,14 +160,14 @@ function NearYou({ onStartTrip, findCountry }) {
       {!s.attractions.length ? (
         <div className="muted small" style={{ padding: '0 2px 10px' }}>No notable spots found right here — try Trending below.</div>
       ) : (
-        <div className="hscroll">
+        <Hrow>
           {s.attractions.map((p) => (
             <div className="dcard" key={p.id} onClick={plan}>
               <PlaceImage query={p.name} wikipedia={p.wikipedia} fallback={p.image} className="dimg" />
               <div className="dmeta"><div className="t">{p.name}</div><div className="s">{p.kind || 'Attraction'}</div></div>
             </div>
           ))}
-        </div>
+        </Hrow>
       )}
     </>
   )
@@ -149,10 +176,15 @@ function NearYou({ onStartTrip, findCountry }) {
 function TripCard({ t, onOpen }) {
   const dest = t.destinations[0]
   const cityQuery = dest ? dest.city || dest.country?.name : t.name
+  const remove = (e) => {
+    e.stopPropagation()
+    if (confirm(`Delete “${t.name}”? This can’t be undone.`)) deleteTrip(t.id)
+  }
   return (
     <div className="card trip-card" onClick={() => onOpen(t.id)}>
       <PlaceImage query={cityQuery} className="cover" fallback={dest ? flagImg(dest.country?.cca2) : ''}>
         <div className="veil" />
+        <button className="del" onClick={remove} aria-label="Delete trip">🗑</button>
         <div className="flagrow">
           <div className="name">{t.destinations.map((d) => d.country?.flag).join(' ')} {t.name}</div>
         </div>

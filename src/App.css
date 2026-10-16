@@ -725,6 +725,52 @@ textarea.input {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.emoji-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-soft);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+.hrow {
+  position: relative;
+}
+.harr {
+  position: absolute;
+  top: 44px;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.harr.left { left: -4px; }
+.harr.right { right: -4px; }
+.trip-card .del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 15px;
+}
 .locbtn {
   display: flex;
   align-items: center;
