@@ -3,8 +3,17 @@
 // (one geocode + one Overpass query per search) to respect usage policy.
 import { getJSON } from './http.js'
 
-const NOMINATIM = 'https://nominatim.openstreetmap.org/search'
-const OVERPASS = 'https://overpass-api.de/api/interpreter'
+// Photon (komoot) geocoder — OSM-based and, unlike Nominatim's public server,
+// it returns an Access-Control-Allow-Origin header so browsers can call it.
+const GEOCODER = 'https://photon.komoot.io/api/'
+// Several public Overpass mirrors — tried in order; some rate-limit or soft-
+// block (HTTP 406/429) at times, so we fail over to the next.
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+]
 
 export const CATEGORIES = {
   attractions: {
@@ -27,18 +36,45 @@ export const CATEGORIES = {
 
 export async function geocode(query) {
   if (!query || !query.trim()) return null
-  const url = `${NOMINATIM}?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`
+  const url = `${GEOCODER}?limit=1&q=${encodeURIComponent(query)}`
   const data = await getJSON(url, { timeout: 15000 })
-  if (!Array.isArray(data) || !data.length) return null
-  const r = data[0]
-  return { lat: Number(r.lat), lon: Number(r.lon), label: r.display_name }
+  const f = data?.features?.[0]
+  if (!f) return null
+  const [lon, lat] = f.geometry.coordinates
+  const p = f.properties || {}
+  const label = [p.name, p.city, p.state, p.country].filter(Boolean).join(', ')
+  return { lat, lon, label }
+}
+
+async function overpass(query) {
+  let lastErr
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), 30000)
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(query)}`,
+      })
+      clearTimeout(t)
+      if (!res.ok) {
+        lastErr = new Error(`Overpass ${res.status}`)
+        continue
+      }
+      return await res.json()
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw new Error('Places service is busy right now — please try again in a moment.')
 }
 
 export async function nearby(lat, lon, category = 'attractions', radius = 5000) {
   const cat = CATEGORIES[category] || CATEGORIES.attractions
   const q = `[out:json][timeout:25];(nwr[${cat.filter}](around:${radius},${lat},${lon}););out center 60;`
-  const url = `${OVERPASS}?data=${encodeURIComponent(q)}`
-  const data = await getJSON(url, { timeout: 30000 })
+  const data = await overpass(q)
   const seen = new Set()
   const out = []
   for (const el of data.elements || []) {

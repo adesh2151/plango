@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore, createTrip } from '../lib/store.js'
 import { fmtDate, daysBetween } from '../lib/format.js'
 import { uid } from '../lib/format.js'
+import { flagImg } from '../lib/countries.js'
 import { Modal, Field, CountryPicker, CurrencyPicker, Empty, PlaceImage } from './ui.jsx'
 
 export default function Home({ onOpen }) {
@@ -35,7 +36,7 @@ export default function Home({ onOpen }) {
         const cityQuery = dest ? `${dest.city || dest.country?.name}` : t.name
         return (
           <div className="card trip-card" key={t.id} onClick={() => onOpen(t.id)}>
-            <PlaceImage query={cityQuery} className="cover">
+            <PlaceImage query={cityQuery} className="cover" fallback={dest ? flagImg(dest.country?.cca2) : ''}>
               <div className="veil" />
               <div className="flagrow">
                 <div className="name">

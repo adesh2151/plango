@@ -42,9 +42,14 @@ export default defineConfig({
             options: { cacheName: 'wiki-img', expiration: { maxEntries: 200, maxAgeSeconds: 604800 } },
           },
           {
-            urlPattern: /^https:\/\/(nominatim\.openstreetmap\.org|overpass-api\.de)\/.*/i,
+            urlPattern: /^https:\/\/(photon\.komoot\.io|overpass[.-])/i,
             handler: 'NetworkFirst',
             options: { cacheName: 'places', expiration: { maxEntries: 100, maxAgeSeconds: 604800 } },
+          },
+          {
+            urlPattern: /^https:\/\/en\.wikivoyage\.org\/.*/i,
+            handler: 'NetworkFirst',
+            options: { cacheName: 'wikivoyage', expiration: { maxEntries: 100, maxAgeSeconds: 604800 } },
           },
         ],
       },
