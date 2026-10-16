@@ -57,6 +57,42 @@ export function setSettings(patch) {
   set({ ...state, settings: { ...state.settings, ...patch } })
 }
 
+// ---- backup / restore / import ----
+export function exportData() {
+  return JSON.stringify(state, null, 2)
+}
+
+// Replace everything from a backup file (profile, settings, trips).
+export function importAll(json) {
+  const data = typeof json === 'string' ? JSON.parse(json) : json
+  if (!data || typeof data !== 'object') throw new Error('Not a valid PlanGo backup')
+  set({ ...structuredClone(EMPTY), ...data })
+}
+
+// Add a single trip (e.g. from a shared link) as a fresh copy.
+export function importTripObject(trip) {
+  if (!trip || !trip.name) throw new Error('Not a valid trip')
+  const reId = (arr) => (arr || []).map((x) => ({ ...x, id: uid() }))
+  const copy = {
+    baseCurrency: 'USD',
+    travelers: [{ id: uid(), name: 'Me' }],
+    destinations: [],
+    items: [],
+    expenses: [],
+    favorites: [],
+    packing: [],
+    ...structuredClone(trip),
+    id: uid(),
+    createdAt: Date.now(),
+    items: reId(trip.items),
+    favorites: reId(trip.favorites),
+    packing: reId(trip.packing),
+    destinations: reId(trip.destinations),
+  }
+  set({ ...state, trips: [copy, ...state.trips] })
+  return copy.id
+}
+
 // ---- trips ----
 export function createTrip(partial = {}) {
   const id = uid()

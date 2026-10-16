@@ -7,14 +7,18 @@ import { money } from '../lib/format.js'
 import { CountryPicker, PlaceImage, Loading, ErrorBox, useAsync } from './ui.jsx'
 import CurrencyConverter from './CurrencyConverter.jsx'
 
-export default function World() {
+export default function World({ embedded = false }) {
   const { profile } = useStore()
   const [dest, setDest] = useState(null)
 
   return (
     <div>
-      <h2 style={{ margin: '4px 2px 2px' }}>World info</h2>
-      <div className="muted small" style={{ margin: '0 2px 14px' }}>Live visa rules, country facts and exchange rates — anywhere.</div>
+      {!embedded && (
+        <>
+          <h2 style={{ margin: '4px 2px 2px' }}>World info</h2>
+          <div className="muted small" style={{ margin: '0 2px 14px' }}>Live visa rules, country facts and exchange rates — anywhere.</div>
+        </>
+      )}
 
       <div className="section-title">Check visa & country</div>
       {!profile.passportCca3 && (

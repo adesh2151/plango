@@ -1,50 +1,56 @@
-// Live exchange rates from the ExchangeRate-API open endpoint (free, no key,
-// fast, proper CORS, ~160 currencies). Chosen over Frankfurter because that
-// host was slow/flaky from some networks. Currency display names come from the
-// browser's built-in Intl.DisplayNames, so the name list needs no network.
+// Live exchange rates from the open-source @fawazahmed0/currency-api (served
+// free via jsDelivr, no key, proper CORS, 150+ currencies, updated daily).
+// Fully open — https://github.com/fawazahmed0/exchange-api. Crypto codes are
+// filtered out via Intl so only real-world currencies show.
 import { getJSON } from './http.js'
 
-const API = 'https://open.er-api.com/v6/latest'
+const BASE = 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies'
 
 let listCache = null
-const baseCache = {} // base code -> { rates, date }
+const baseCache = {} // lowercase base code -> { rates (UPPER keys), date }
 
 function currencyName(code) {
   try {
-    return new Intl.DisplayNames(['en'], { type: 'currency' }).of(code) || code
+    return new Intl.DisplayNames(['en'], { type: 'currency' }).of(code.toUpperCase()) || null
   } catch {
-    return code
+    return null
   }
+}
+// A real-world currency: 3-letter ISO code that Intl recognises (so BTC/ADA/etc. drop out).
+function isFiat(code) {
+  if (!/^[a-z]{3}$/i.test(code)) return false
+  const n = currencyName(code)
+  return !!n && n.toUpperCase() !== code.toUpperCase()
 }
 
 async function fetchBase(base) {
-  const b = (base || 'USD').toUpperCase()
+  const b = (base || 'USD').toLowerCase()
   if (baseCache[b]) return baseCache[b]
-  const data = await getJSON(`${API}/${b}`)
-  if (data.result === 'error') throw new Error(data['error-type'] || 'Rate lookup failed')
-  const date = data.time_last_update_utc ? new Date(data.time_last_update_utc).toISOString().slice(0, 10) : null
-  baseCache[b] = { rates: data.rates || {}, date }
+  const d = await getJSON(`${BASE}/${b}.min.json`)
+  const raw = d[b] || {}
+  const rates = {}
+  for (const [k, v] of Object.entries(raw)) rates[k.toUpperCase()] = v
+  baseCache[b] = { rates, date: d.date || null }
   return baseCache[b]
 }
 
 export async function listCurrencies() {
   if (listCache) return listCache
-  const { rates } = await fetchBase('USD')
-  const out = {}
-  for (const code of Object.keys(rates).sort()) out[code] = currencyName(code)
-  listCache = out
-  return out
+  const { rates } = await fetchBase('usd')
+  const out = { USD: 'US Dollar' }
+  for (const code of Object.keys(rates)) if (isFiat(code)) out[code] = currencyName(code)
+  listCache = Object.fromEntries(Object.entries(out).sort((a, b) => a[0].localeCompare(b[0])))
+  return listCache
 }
 
-// Sync converter from any supported currency into `base`.
-// `rates` are base->X, so to go X->base we divide.
+// Sync converter into `base` (rates are base->X, so X->base divides).
 export async function buildConverter(base) {
   const b = (base || 'USD').toUpperCase()
   let rates = {}
   let date = null
   try {
     const d = await fetchBase(b)
-    rates = d.rates
+    rates = { ...d.rates }
     date = d.date
   } catch {
     rates = {}

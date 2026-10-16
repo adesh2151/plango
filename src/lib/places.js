@@ -63,15 +63,16 @@ export async function wikiNearby(lat, lon, limit = 28) {
     .sort((a, b) => (b.image ? 1 : 0) - (a.image ? 1 : 0))
 }
 
-// Reverse geocode (coords -> city/state/country) for the "near you" feature.
+// Reverse geocode (coords -> city/state/country) for the "near you" feature,
+// via Photon (open-source, OSM-based).
 export async function reverseGeocode(lat, lon) {
-  const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
-  const d = await getJSON(url, { timeout: 12000 })
+  const d = await getJSON(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`, { timeout: 12000 })
+  const p = d?.features?.[0]?.properties || {}
   return {
-    city: d.city || d.locality || '',
-    state: d.principalSubdivision || '',
-    country: d.countryName || '',
-    countryCode: d.countryCode || '',
+    city: p.city || p.town || p.village || p.county || p.name || '',
+    state: p.state || '',
+    country: p.country || '',
+    countryCode: (p.countrycode || '').toUpperCase(),
   }
 }
 

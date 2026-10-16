@@ -2,10 +2,14 @@ import { useState } from 'react'
 import { addPacking, updatePacking, removePacking } from '../lib/store.js'
 import { getGuide } from '../lib/tips.js'
 import { Loading, ErrorBox, Empty, useAsync } from './ui.jsx'
+import Info from './Info.jsx'
 
 export default function Guide({ trip }) {
   return (
     <div>
+      <div className="section-title">Visa, currency &amp; country facts</div>
+      <Info trip={trip} />
+
       <div className="section-title">Before you go — local tips</div>
       {!trip.destinations.length && <Empty icon="📋" title="No destinations" hint="Add a destination to load local do’s & don’ts, safety and entry tips." />}
       {trip.destinations.map((d) => (

@@ -27,9 +27,19 @@ export default function Plan({ trip }) {
       const k = it.date || 'unscheduled'
       ;(map[k] ||= []).push(it)
     }
-    for (const k in map) map[k].sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+    // Manual order wins; otherwise fall back to time.
+    for (const k in map)
+      map[k].sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || (a.time || '').localeCompare(b.time || ''))
     return map
   }, [trip.items])
+
+  const move = (dayItems, index, dir) => {
+    const j = index + dir
+    if (j < 0 || j >= dayItems.length) return
+    const reordered = [...dayItems]
+    ;[reordered[index], reordered[j]] = [reordered[j], reordered[index]]
+    reordered.forEach((it, i) => updateItem(trip.id, it.id, { order: i }))
+  }
 
   const allDays = [...new Set([...days, ...Object.keys(byDate)])]
 
@@ -49,18 +59,24 @@ export default function Plan({ trip }) {
               ＋ Add
             </button>
           </div>
-          {(byDate[d] || []).map((it) => (
-            <div className="item" key={it.id} onClick={() => setEditing(it)}>
-              <div className="tcol">{it.time || '—'}</div>
-              <div className="emoji">{emojiFor(it.type)}</div>
-              <div className="grow">
-                <div style={{ fontWeight: 700 }}>{it.title}</div>
-                <div className="small muted">
-                  {it.type === 'transport' && it.mode ? `${it.mode} · ` : ''}
-                  {it.place || TYPES.find((t) => t.key === it.type)?.label}
-                </div>
+          {(byDate[d] || []).map((it, idx, arr) => (
+            <div className="item" key={it.id}>
+              <div className="reorder">
+                <button onClick={() => move(arr, idx, -1)} disabled={idx === 0} aria-label="Move up">▲</button>
+                <button onClick={() => move(arr, idx, 1)} disabled={idx === arr.length - 1} aria-label="Move down">▼</button>
               </div>
-              {Number(it.cost) > 0 && <div className="small soft">{money(it.cost, it.currency || trip.baseCurrency)}</div>}
+              <div className="grow row" style={{ gap: 10 }} onClick={() => setEditing(it)}>
+                <div className="tcol">{it.time || '—'}</div>
+                <div className="emoji">{emojiFor(it.type)}</div>
+                <div className="grow">
+                  <div style={{ fontWeight: 700 }}>{it.title}</div>
+                  <div className="small muted">
+                    {it.type === 'transport' && it.mode ? `${it.mode} · ` : ''}
+                    {it.place || TYPES.find((t) => t.key === it.type)?.label}
+                  </div>
+                </div>
+                {Number(it.cost) > 0 && <div className="small soft">{money(it.cost, it.currency || trip.baseCurrency)}</div>}
+              </div>
             </div>
           ))}
           {!(byDate[d] || []).length && <div className="muted small" style={{ padding: '2px 4px 8px' }}>Nothing planned.</div>}

@@ -5,19 +5,31 @@ import { Modal, Field, CountryPicker, CurrencyPicker } from './ui.jsx'
 import Plan from './Plan.jsx'
 import Money from './Money.jsx'
 import Explore from './Explore.jsx'
-import Favorites from './Favorites.jsx'
-import Info from './Info.jsx'
 import Guide from './Guide.jsx'
+import TripMap from './TripMap.jsx'
 import { exportTripPdf } from '../lib/exportPdf.js'
+import { tripShareUrl } from '../lib/share.js'
 
 const TABS = [
   { key: 'plan', label: '🗓️ Plan' },
   { key: 'money', label: '💰 Money' },
   { key: 'explore', label: '🧭 Explore' },
   { key: 'guide', label: '📋 Guide' },
-  { key: 'fav', label: '❤️ Saved' },
-  { key: 'info', label: '🛂 Visa & $' },
+  { key: 'map', label: '🗺️ Map' },
 ]
+
+async function shareTrip(trip) {
+  const url = tripShareUrl(trip)
+  try {
+    if (navigator.share) await navigator.share({ title: `PlanGo — ${trip.name}`, text: 'Check out my trip plan', url })
+    else {
+      await navigator.clipboard.writeText(url)
+      alert('Trip link copied to clipboard! Anyone who opens it gets a copy of this plan.')
+    }
+  } catch {
+    /* share cancelled */
+  }
+}
 
 export default function TripScreen({ tripId, onBack }) {
   const { trips } = useStore()
@@ -35,7 +47,8 @@ export default function TripScreen({ tripId, onBack }) {
       <div className="row between" style={{ margin: '2px 0 10px' }}>
         <button className="iconbtn" onClick={onBack} aria-label="Back">←</button>
         <div className="row" style={{ gap: 8 }}>
-          <button className="btn sm" onClick={() => exportTripPdf(trip)}>📄 Export PDF</button>
+          <button className="btn sm" onClick={() => shareTrip(trip)}>🔗 Share</button>
+          <button className="btn sm" onClick={() => exportTripPdf(trip)}>📄 PDF</button>
           <button className="iconbtn" onClick={() => setEditing(true)} aria-label="Edit trip">⋯</button>
         </div>
       </div>
@@ -61,8 +74,7 @@ export default function TripScreen({ tripId, onBack }) {
       {tab === 'money' && <Money trip={trip} />}
       {tab === 'explore' && <Explore trip={trip} />}
       {tab === 'guide' && <Guide trip={trip} />}
-      {tab === 'fav' && <Favorites trip={trip} />}
-      {tab === 'info' && <Info trip={trip} />}
+      {tab === 'map' && <TripMap trip={trip} />}
 
       {editing && <EditTripModal trip={trip} onClose={() => setEditing(false)} onDeleted={onBack} />}
     </div>

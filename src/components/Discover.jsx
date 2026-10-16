@@ -5,6 +5,7 @@ import { loadMatrix, classify, STATUS_META } from '../lib/visa.js'
 import { createAmadeus } from '../lib/amadeus.js'
 import { money, uid } from '../lib/format.js'
 import { PlaceImage, Loading, ErrorBox, Empty, Field, useAsync } from './ui.jsx'
+import World from './World.jsx'
 
 const REGIONS = ['Africa', 'Americas', 'Asia', 'Europe', 'Oceania']
 const VISA_FILTERS = [
@@ -22,16 +23,21 @@ const matchVisa = (status, filter) => {
 }
 
 export default function Discover({ onStartTrip }) {
+  const { settings } = useStore()
+  const hasAmadeus = settings.amadeusId && settings.amadeusSecret
   const [mode, setMode] = useState('visa')
   return (
     <div>
       <h2 style={{ margin: '4px 2px 2px' }}>Discover</h2>
       <div className="muted small" style={{ margin: '0 2px 14px' }}>Can’t decide where to go? Let PlanGo suggest — live.</div>
       <div className="tabbar">
-        <button className={mode === 'visa' ? 'on' : ''} onClick={() => setMode('visa')}>🛂 By visa & region</button>
-        <button className={mode === 'budget' ? 'on' : ''} onClick={() => setMode('budget')}>💸 By budget</button>
+        <button className={mode === 'visa' ? 'on' : ''} onClick={() => setMode('visa')}>🛂 Where to go</button>
+        {hasAmadeus && <button className={mode === 'budget' ? 'on' : ''} onClick={() => setMode('budget')}>💸 By budget</button>}
+        <button className={mode === 'ref' ? 'on' : ''} onClick={() => setMode('ref')}>🌍 Visa &amp; money</button>
       </div>
-      {mode === 'visa' ? <ByVisa onStartTrip={onStartTrip} /> : <ByBudget onStartTrip={onStartTrip} />}
+      {mode === 'visa' && <ByVisa onStartTrip={onStartTrip} />}
+      {mode === 'budget' && hasAmadeus && <ByBudget onStartTrip={onStartTrip} />}
+      {mode === 'ref' && <World embedded />}
     </div>
   )
 }

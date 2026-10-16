@@ -5,19 +5,25 @@ import { countryByCode } from '../lib/countries.js'
 import { createAmadeus } from '../lib/amadeus.js'
 import { PlaceImage, Loading, ErrorBox, Empty, Field } from './ui.jsx'
 import { money } from '../lib/format.js'
+import Favorites from './Favorites.jsx'
 
-export default function Explore({ trip, goSettings }) {
+export default function Explore({ trip }) {
+  const { settings } = useStore()
+  const hasAmadeus = settings.amadeusId && settings.amadeusSecret
   const [tab, setTab] = useState('places')
+
   return (
     <div>
       <div className="tabbar">
         <button className={tab === 'places' ? 'on' : ''} onClick={() => setTab('places')}>📍 Places</button>
-        <button className={tab === 'flights' ? 'on' : ''} onClick={() => setTab('flights')}>✈️ Flights</button>
-        <button className={tab === 'hotels' ? 'on' : ''} onClick={() => setTab('hotels')}>🏨 Hotels</button>
+        <button className={tab === 'saved' ? 'on' : ''} onClick={() => setTab('saved')}>❤️ Saved</button>
+        {hasAmadeus && <button className={tab === 'flights' ? 'on' : ''} onClick={() => setTab('flights')}>✈️ Flights</button>}
+        {hasAmadeus && <button className={tab === 'hotels' ? 'on' : ''} onClick={() => setTab('hotels')}>🏨 Hotels</button>}
       </div>
       {tab === 'places' && <Places trip={trip} />}
-      {tab === 'flights' && <Flights trip={trip} goSettings={goSettings} />}
-      {tab === 'hotels' && <Hotels trip={trip} goSettings={goSettings} />}
+      {tab === 'saved' && <Favorites trip={trip} />}
+      {tab === 'flights' && hasAmadeus && <Flights trip={trip} />}
+      {tab === 'hotels' && hasAmadeus && <Hotels trip={trip} />}
     </div>
   )
 }
@@ -114,7 +120,7 @@ function PlaceCard({ place, trip, cityName, category }) {
           <button className="btn sm" disabled={saved} onClick={() => { addFavorite(trip.id, { name: place.name, type: place.kind || category, place: cityName, lat: place.lat, lon: place.lon, wikipedia: place.wikipedia, website: place.website, openingHours: place.openingHours, fee: place.fee }); setSaved(true) }}>
             {saved ? '♥ Saved' : '♡ Save'}
           </button>
-          <button className="btn sm" disabled={added} onClick={() => { addItem(trip.id, { type: planType, title: place.name, place: cityName, date: '', time: '', cost: '', currency: trip.baseCurrency, notes: [place.openingHours && `Hours: ${place.openingHours}`, place.fee && `Fee: ${place.fee}`].filter(Boolean).join(' · ') }); setAdded(true) }}>
+          <button className="btn sm" disabled={added} onClick={() => { addItem(trip.id, { type: planType, title: place.name, place: cityName, date: '', time: '', cost: '', currency: trip.baseCurrency, lat: place.lat, lon: place.lon, notes: [place.openingHours && `Hours: ${place.openingHours}`, place.fee && `Fee: ${place.fee}`].filter(Boolean).join(' · ') }); setAdded(true) }}>
             {added ? '✓ Planned' : '＋ Plan'}
           </button>
           {place.website && <a className="btn sm ghost" href={place.website} target="_blank" rel="noreferrer">↗</a>}
