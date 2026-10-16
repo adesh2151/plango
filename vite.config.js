@@ -42,7 +42,7 @@ export default defineConfig({
             options: { cacheName: 'wiki-img', expiration: { maxEntries: 200, maxAgeSeconds: 604800 } },
           },
           {
-            urlPattern: /^https:\/\/(geocoding-api\.open-meteo\.com|overpass[.-])/i,
+            urlPattern: /^https:\/\/(photon\.komoot\.io|overpass[.-])/i,
             handler: 'NetworkFirst',
             options: { cacheName: 'places', expiration: { maxEntries: 100, maxAgeSeconds: 604800 } },
           },

@@ -3,6 +3,7 @@
 // traveller's interests (matching keywords in each place's description), orders
 // them by proximity, and splits them across the requested number of days.
 import { geocode, wikiNearby, reverseGeocode } from './places.js'
+import { getRegionCities } from './regions.js'
 
 // Interest label (from Settings.INTERESTS) -> keywords to match in a place's
 // name/description. Kept broad so real attractions aren't missed.
@@ -32,7 +33,14 @@ function matchesInterest(place, interests) {
   return interests.some((i) => (INTEREST_KEYWORDS[i] || []).some((k) => hay.includes(k)))
 }
 
-export async function generatePlan({ query, days = 3, interests = [], perDay = 3 }) {
+export async function generatePlan({ query, days = 3, interests = [], perDay = 3, allowRegion = true }) {
+  // If this is a state/country, suggest cities to plan rather than guessing a
+  // centroid (which is usually empty countryside).
+  if (allowRegion) {
+    const cities = await getRegionCities(query)
+    if (cities.length >= 3) return { region: true, place: query, cities }
+  }
+
   const center = await geocode(query)
   if (!center) throw new Error(`Couldn't find "${query}" — try a city name.`)
 

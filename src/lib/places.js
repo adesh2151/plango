@@ -3,9 +3,10 @@
 // (one geocode + one Overpass query per search) to respect usage policy.
 import { getJSON } from './http.js'
 
-// Open-Meteo geocoder — free, no key, fast, proper CORS. (Nominatim sends no
-// CORS header and Photon was slow/timed out from some networks.)
-const GEOCODER = 'https://geocoding-api.open-meteo.com/v1/search'
+// Photon geocoder (open-source, OSM-based, proper CORS). Chosen over Open-Meteo
+// because Open-Meteo mis-matches many place names (e.g. Goa -> Genoa, Italy),
+// which is unacceptable for a travel app. Nominatim sends no CORS header.
+const GEOCODER = 'https://photon.komoot.io/api/'
 // Several public Overpass mirrors — tried in order; some rate-limit or soft-
 // block (HTTP 406/429) at times, so we fail over to the next.
 const OVERPASS_ENDPOINTS = [
@@ -79,16 +80,13 @@ export async function reverseGeocode(lat, lon) {
 export async function geocode(query) {
   const q = (query || '').trim()
   if (!q) return null
-  const tryName = async (name) => {
-    const url = `${GEOCODER}?count=1&language=en&format=json&name=${encodeURIComponent(name)}`
-    const data = await getJSON(url, { timeout: 12000 })
-    return data?.results?.[0] || null
-  }
-  // Open-Meteo matches on a place name, so retry with the part before a comma.
-  let r = await tryName(q)
-  if (!r && q.includes(',')) r = await tryName(q.split(',')[0].trim())
-  if (!r) return null
-  return { lat: r.latitude, lon: r.longitude, label: [r.name, r.admin1, r.country].filter(Boolean).join(', ') }
+  const url = `${GEOCODER}?limit=1&q=${encodeURIComponent(q)}`
+  const data = await getJSON(url, { timeout: 12000 })
+  const f = data?.features?.[0]
+  if (!f) return null
+  const [lon, lat] = f.geometry.coordinates
+  const p = f.properties || {}
+  return { lat, lon, label: [p.name, p.state, p.country].filter(Boolean).join(', ') }
 }
 
 async function overpass(query) {

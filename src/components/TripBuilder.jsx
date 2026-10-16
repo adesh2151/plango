@@ -53,17 +53,26 @@ export default function TripBuilder({ onClose, onCreated, profile }) {
 
   const toggle = (i) => setInterests(interests.includes(i) ? interests.filter((x) => x !== i) : [...interests, i])
 
-  const generate = async () => {
-    if (!query.trim()) return
+  const generate = async (overrideQuery, allowRegion = true) => {
+    const q = (overrideQuery ?? query).trim()
+    if (!q) return
     setState({ loading: true, error: null, plan: null })
     try {
-      const plan = await generatePlan({ query: query.trim(), days, interests })
+      const plan = await generatePlan({ query: q, days, interests, allowRegion })
       setState({ loading: false, error: null, plan })
-      const usd = BUDGET_TIERS[tier].perDay * days
-      convertOne(usd, 'USD', profile.homeCurrency || 'USD').then((v) => setEstimate(v)).catch(() => setEstimate(usd))
+      if (!plan.region) {
+        const usd = BUDGET_TIERS[tier].perDay * days
+        convertOne(usd, 'USD', profile.homeCurrency || 'USD').then((v) => setEstimate(v)).catch(() => setEstimate(usd))
+      }
     } catch (error) {
       setState({ loading: false, error, plan: null })
     }
+  }
+
+  const pickCity = (c) => {
+    const q = `${c.name}, ${c.region}`
+    setQuery(q)
+    generate(q, false)
   }
 
   const save = () => {
@@ -154,7 +163,19 @@ export default function TripBuilder({ onClose, onCreated, profile }) {
       {state.loading && <Loading label="Building your day-by-day plan…" />}
       <ErrorBox error={state.error} />
 
-      {state.plan && (
+      {state.plan?.region && (
+        <div className="card">
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>📍 {state.plan.place} is a big area</div>
+          <div className="small muted" style={{ marginBottom: 10 }}>Pick a city and I’ll build your {days}-day plan there:</div>
+          <div className="row wrap">
+            {state.plan.cities.map((c) => (
+              <span key={c.name} className="chip" style={{ cursor: 'pointer' }} onClick={() => pickCity(c)}>{c.name}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {state.plan && !state.plan.region && (
         <>
           <div className="card">
             <div className="row between">
