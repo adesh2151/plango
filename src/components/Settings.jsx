@@ -102,6 +102,7 @@ export default function Settings() {
           <li>Guides — Wikivoyage (CC BY-SA) · Photos — Wikipedia</li>
           <li>Flights &amp; hotels — Amadeus (optional, your key)</li>
         </ul>
+        <p style={{ marginBottom: 0 }}>Made with ❤️ by <b>Adesh</b> · <a href="https://adesh2151.github.io/" target="_blank" rel="noreferrer">more free apps by Adesh</a></p>
       </div>
     </div>
   )

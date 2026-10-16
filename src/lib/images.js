@@ -5,6 +5,26 @@ import { getJSON } from './http.js'
 
 const cache = new Map()
 
+// A small photo gallery for a place, from Wikipedia's media list (Wikimedia).
+export async function getGallery(title, limit = 10) {
+  if (!title) return []
+  try {
+    const url = `https://en.wikipedia.org/api/rest_v1/page/media-list/${encodeURIComponent(title.replace(/ /g, '_'))}`
+    const data = await getJSON(url, { timeout: 10000 })
+    const out = []
+    for (const it of data.items || []) {
+      if (it.type !== 'image' || it.showInGallery === false) continue
+      const src = it.srcset?.[0]?.src || it.src
+      if (!src) continue
+      out.push(src.startsWith('//') ? 'https:' + src : src)
+      if (out.length >= limit) break
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
 // title may be a plain name ("Eiffel Tower") or an OSM "en:Eiffel Tower" tag.
 export async function wikiImage(title, lang = 'en') {
   if (!title) return null

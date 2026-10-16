@@ -146,6 +146,10 @@ export default function Home({ onOpen, onOpenDest, onBuild, onStartTrip }) {
       {!trips.length && <Empty icon="🗺️" title="No trips yet" hint="Search a place, tap a destination, or ‘Build my trip’ to start." />}
       {sortedTrips.map((t) => <TripCard key={t.id} t={t} onOpen={onOpen} />)}
 
+      <div className="credit" style={{ marginTop: 18 }}>
+        Made with ❤️ by <b>Adesh</b> · <a href="https://adesh2151.github.io/" target="_blank" rel="noreferrer">more free apps</a>
+      </div>
+
       {creating && (
         <CreateTripModal defaultCurrency={profile.homeCurrency} onClose={() => setCreating(false)} onCreate={(data) => { const id = createTrip(data); setCreating(false); onOpen(id) }} />
       )}

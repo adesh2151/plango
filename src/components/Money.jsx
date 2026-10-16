@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { addExpense, updateExpense, removeExpense, addTraveler, removeTraveler } from '../lib/store.js'
+import { addExpense, updateExpense, removeExpense, addTraveler, removeTraveler, addSettlement, removeSettlement } from '../lib/store.js'
 import { buildConverter } from '../lib/currency.js'
 import { computeBalances } from '../lib/settle.js'
 import { money, fmtDate } from '../lib/format.js'
@@ -24,14 +24,26 @@ export default function Money({ trip }) {
     for (const e of trip.expenses) {
       const b = conv.convert(e.amount, e.currency)
       if (b === null) bad.push(e)
-      out.push({ ...e, baseAmount: b ?? 0 })
+      const amt = b ?? 0
+      let shareBase = null
+      if (e.splitMode === 'shares' && e.splits) {
+        const sum = Object.values(e.splits).reduce((a, v) => a + (Number(v) || 0), 0)
+        if (sum > 0) {
+          shareBase = {}
+          for (const [id, w] of Object.entries(e.splits)) if (Number(w) > 0) shareBase[id] = (amt * Number(w)) / sum
+        }
+      } else if (e.splitMode === 'exact' && e.splits) {
+        shareBase = {}
+        for (const [id, v] of Object.entries(e.splits)) if (Number(v) > 0) shareBase[id] = conv.convert(Number(v), e.currency) ?? 0
+      }
+      out.push({ ...e, baseAmount: amt, shareBase })
     }
     return { normalised: out, unsupported: bad }
   }, [conv, trip.expenses])
 
   const balances = useMemo(
-    () => computeBalances(normalised, trip.travelers),
-    [normalised, trip.travelers],
+    () => computeBalances(normalised, trip.travelers, trip.settlements || []),
+    [normalised, trip.travelers, trip.settlements],
   )
   const nameOf = (id) => trip.travelers.find((t) => t.id === id)?.name || '?'
 
@@ -100,6 +112,21 @@ export default function Money({ trip }) {
               <span>{nameOf(s.to)}</span>
               <span className="grow" />
               <span className="pos">{money(s.amount, base)}</span>
+              <button className="btn sm" onClick={() => addSettlement(trip.id, { from: s.from, to: s.to, amount: s.amount, date: new Date().toISOString().slice(0, 10) })}>✓ Paid</button>
+            </div>
+          ))}
+        </>
+      )}
+      {balances.settlements.length === 0 && trip.expenses.length > 0 && (
+        <div className="settle" style={{ justifyContent: 'center', color: 'var(--good)' }}>🎉 All settled up!</div>
+      )}
+      {(trip.settlements || []).length > 0 && (
+        <>
+          <div className="section-title">Recorded payments</div>
+          {trip.settlements.map((s) => (
+            <div className="bal" key={s.id}>
+              <span className="small">{nameOf(s.from)} paid {nameOf(s.to)} · {money(s.amount, base)}{s.date ? ` · ${s.date}` : ''}</span>
+              <button className="btn sm ghost" onClick={() => removeSettlement(trip.id, s.id)}>Undo</button>
             </div>
           ))}
         </>
@@ -171,20 +198,24 @@ export default function Money({ trip }) {
 }
 
 function ExpenseModal({ trip, expense, onClose }) {
-  const [f, setF] = useState(
-    expense || {
-      title: '',
-      amount: '',
-      currency: trip.baseCurrency,
-      paidBy: trip.travelers[0]?.id,
-      splitAmong: trip.travelers.map((t) => t.id),
-      category: CATEGORIES[0],
-      date: trip.startDate || '',
-    },
-  )
+  const [f, setF] = useState(() => ({
+    title: '',
+    amount: '',
+    currency: trip.baseCurrency,
+    paidBy: trip.travelers[0]?.id,
+    splitAmong: trip.travelers.map((t) => t.id),
+    splitMode: 'equal',
+    splits: {},
+    category: CATEGORIES[0],
+    date: trip.startDate || '',
+    ...(expense || {}),
+  }))
   const upd = (k, v) => setF({ ...f, [k]: v })
   const toggle = (id) =>
     upd('splitAmong', f.splitAmong.includes(id) ? f.splitAmong.filter((x) => x !== id) : [...f.splitAmong, id])
+  const setSplit = (id, v) => setF({ ...f, splits: { ...f.splits, [id]: v } })
+
+  const exactSum = Object.values(f.splits).reduce((a, v) => a + (Number(v) || 0), 0)
 
   const save = () => {
     if (!f.title.trim() || !(Number(f.amount) > 0)) return
@@ -226,14 +257,38 @@ function ExpenseModal({ trip, expense, onClose }) {
           {trip.travelers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </Field>
-      <Field label="Split between">
-        <div className="row wrap">
-          {trip.travelers.map((t) => (
-            <span key={t.id} className={`chip ${f.splitAmong.includes(t.id) ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => toggle(t.id)}>
-              {t.name}
-            </span>
+      <Field label="How to split">
+        <div className="row wrap" style={{ marginBottom: 8 }}>
+          {[['equal', 'Equally'], ['shares', 'By shares'], ['exact', 'Exact amounts']].map(([k, l]) => (
+            <span key={k} className={`chip ${f.splitMode === k ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => upd('splitMode', k)}>{l}</span>
           ))}
         </div>
+        {f.splitMode === 'equal' && (
+          <div className="row wrap">
+            {trip.travelers.map((t) => (
+              <span key={t.id} className={`chip ${f.splitAmong.includes(t.id) ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => toggle(t.id)}>{t.name}</span>
+            ))}
+          </div>
+        )}
+        {f.splitMode === 'shares' && trip.travelers.map((t) => (
+          <div className="row between" key={t.id} style={{ padding: '4px 0' }}>
+            <span>{t.name}</span>
+            <input type="number" className="input" style={{ width: 90 }} placeholder="1" value={f.splits[t.id] ?? ''} onChange={(e) => setSplit(t.id, e.target.value)} />
+          </div>
+        ))}
+        {f.splitMode === 'exact' && (
+          <>
+            {trip.travelers.map((t) => (
+              <div className="row between" key={t.id} style={{ padding: '4px 0' }}>
+                <span>{t.name}</span>
+                <input type="number" className="input" style={{ width: 110 }} placeholder="0" value={f.splits[t.id] ?? ''} onChange={(e) => setSplit(t.id, e.target.value)} />
+              </div>
+            ))}
+            <div className={`small ${Math.abs(exactSum - (Number(f.amount) || 0)) < 0.01 ? 'muted' : 'neg'}`}>
+              Assigned {exactSum.toFixed(2)} of {Number(f.amount) || 0} {f.currency}
+            </div>
+          </>
+        )}
       </Field>
       <Field label="Date">
         <input type="date" className="input" value={f.date} onChange={(e) => upd('date', e.target.value)} />

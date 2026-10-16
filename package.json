@@ -1,7 +1,7 @@
 {
   "name": "plango",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "description": "PlanGo — plan it, then go. End-to-end trip planning: itinerary + transport, who-paid-what expense splitting across currencies, favourite places with photos, and live visa, currency and exchange-rate info worldwide. PWA + Android.",
   "scripts": {

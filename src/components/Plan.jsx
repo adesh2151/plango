@@ -1,7 +1,41 @@
 import { useMemo, useState } from 'react'
 import { addItem, updateItem, removeItem } from '../lib/store.js'
 import { dateRange, fmtDate, money } from '../lib/format.js'
+import { legDurations, optimizeOrder } from '../lib/routing.js'
 import { Modal, Field, Empty } from './ui.jsx'
+
+function DayRoute({ trip, items }) {
+  const withCoords = items.filter((i) => i.lat && i.lon)
+  const [legs, setLegs] = useState(null)
+  const [busy, setBusy] = useState(false)
+  if (withCoords.length < 2) return null
+  const times = async () => {
+    setBusy(true)
+    try { setLegs(await legDurations(withCoords)) } catch { alert('Routing is busy — try again shortly.') } finally { setBusy(false) }
+  }
+  const optimize = async () => {
+    setBusy(true)
+    try {
+      const order = await optimizeOrder(withCoords)
+      order.forEach((origIdx, newPos) => updateItem(trip.id, withCoords[origIdx].id, { order: newPos }))
+      setLegs(null)
+    } catch { alert('Optimise is busy — try again shortly.') } finally { setBusy(false) }
+  }
+  return (
+    <div style={{ margin: '2px 2px 12px' }}>
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn sm" onClick={times} disabled={busy}>🕒 Travel times</button>
+        {withCoords.length >= 3 && <button className="btn sm" onClick={optimize} disabled={busy}>🧭 Optimise order</button>}
+        {busy && <span className="spinner" style={{ width: 16, height: 16 }} />}
+      </div>
+      {legs && (
+        <div className="small muted" style={{ marginTop: 6 }}>
+          🚗 Driving between stops: {legs.map((l) => `${l.min}m`).join(' → ')} · total {legs.reduce((a, l) => a + l.min, 0)} min
+        </div>
+      )}
+    </div>
+  )
+}
 
 const TYPES = [
   { key: 'sight', label: 'Sightseeing', emoji: '📸' },
@@ -80,6 +114,7 @@ export default function Plan({ trip }) {
             </div>
           ))}
           {!(byDate[d] || []).length && <div className="muted small" style={{ padding: '2px 4px 8px' }}>Nothing planned.</div>}
+          <DayRoute trip={trip} items={byDate[d] || []} />
         </div>
       ))}
 

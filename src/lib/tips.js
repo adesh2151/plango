@@ -10,6 +10,7 @@ const WANTED = [
   { key: 'when to go', label: 'When to go', emoji: '🗓️' },
   { key: 'climate', label: 'Climate', emoji: '🌤️' },
   { key: 'get in', label: 'Getting in & entry', emoji: '🛂' },
+  { key: 'eat', label: 'What & where to eat', emoji: '🍽️' },
   { key: 'respect', label: "Do's & don'ts (etiquette)", emoji: '🙏' },
   { key: 'stay safe', label: 'Stay safe', emoji: '🛟' },
   { key: 'stay healthy', label: 'Stay healthy', emoji: '💊' },

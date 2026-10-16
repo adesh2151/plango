@@ -1,9 +1,11 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { useStore, toggleWishlist, isWished } from '../lib/store.js'
-import { geocode, wikiNearby, reverseGeocode } from '../lib/places.js'
+import { geocode, wikiNearby, reverseGeocode, nearby } from '../lib/places.js'
 import { getRegionCities } from '../lib/regions.js'
 import { getWeather } from '../lib/weather.js'
 import { getPopularity } from '../lib/popularity.js'
+import { getGuide } from '../lib/tips.js'
+import { getGallery } from '../lib/images.js'
 import { countryByCode, flagImg } from '../lib/countries.js'
 import { visaRequirement, STATUS_META } from '../lib/visa.js'
 import { PlaceImage, Loading, ErrorBox, Empty, useAsync } from './ui.jsx'
@@ -96,6 +98,8 @@ export default function DestinationPage({ query, onBack, onOpenDest, onBuild, on
         </>
       )}
 
+      <Gallery query={query} />
+
       {/* things to do */}
       <div className="section-title">Top things to do</div>
       {!things.length ? (
@@ -105,6 +109,9 @@ export default function DestinationPage({ query, onBack, onOpenDest, onBuild, on
           {things.map((t) => <ThingCard key={t.id} t={t} />)}
         </div>
       )}
+
+      <EatNearby lat={center.lat} lon={center.lon} />
+      <GoodToKnow query={query} />
 
       {/* map */}
       {things.length > 0 && (
@@ -137,6 +144,60 @@ function ThingCard({ t }) {
         {t.kind && <div className="small muted">{t.kind}</div>}
       </div>
     </div>
+  )
+}
+
+function Gallery({ query }) {
+  const { data } = useAsync(() => getGallery(query), [query])
+  if (!data || !data.length) return null
+  return (
+    <>
+      <div className="section-title">Photos</div>
+      <div className="hscroll">
+        {data.map((src, i) => <div key={i} className="gimg" style={{ backgroundImage: `url("${src}")` }} />)}
+      </div>
+    </>
+  )
+}
+
+function EatNearby({ lat, lon }) {
+  const { data } = useAsync(() => nearby(lat, lon, 'food', 4000).catch(() => []), [lat, lon])
+  if (!data || !data.length) return null
+  return (
+    <>
+      <div className="section-title">Where to eat nearby</div>
+      <div className="hscroll">
+        {data.slice(0, 15).map((p) => (
+          <div key={p.id} className="dcard" style={{ cursor: 'default' }}>
+            <PlaceImage query={p.name} wikipedia={p.wikipedia} fallback={p.image} className="dimg" />
+            <div className="dmeta"><div className="t">{p.name}</div><div className="s">{p.cuisine ? p.cuisine.replace(/;/g, ', ') : p.kind || 'Restaurant'}</div></div>
+          </div>
+        ))}
+      </div>
+      <div className="credit" style={{ textAlign: 'left' }}>Restaurants © OpenStreetMap contributors</div>
+    </>
+  )
+}
+
+function GoodToKnow({ query }) {
+  const { data } = useAsync(() => getGuide(query), [query])
+  const [open, setOpen] = useState(-1)
+  if (!data?.sections?.length) return null
+  return (
+    <>
+      <div className="section-title">Good to know</div>
+      <div className="card">
+        {data.sections.map((s, i) => (
+          <div key={i} style={{ borderTop: i ? '1px solid var(--border)' : 'none', padding: '10px 0' }}>
+            <button className="row between" style={{ width: '100%', border: 'none', background: 'none', color: 'var(--text)', padding: 0, fontWeight: 700 }} onClick={() => setOpen(open === i ? -1 : i)}>
+              <span>{s.emoji} {s.label}</span><span className="muted">{open === i ? '▾' : '▸'}</span>
+            </button>
+            {open === i && <div className="small soft" style={{ whiteSpace: 'pre-line', marginTop: 8, lineHeight: 1.6 }}>{s.text}</div>}
+          </div>
+        ))}
+        {data.url && <a className="small" href={data.url} target="_blank" rel="noreferrer">Full guide on Wikivoyage ↗</a>}
+      </div>
+    </>
   )
 }
 

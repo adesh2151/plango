@@ -122,6 +122,7 @@ export function createTrip(partial = {}) {
     expenses: [],
     favorites: [],
     packing: [],
+    settlements: [],
     createdAt: Date.now(),
   }
   set({ ...state, trips: [trip, ...state.trips] })
@@ -201,3 +202,6 @@ export const removeTraveler = (t, id) => listRemove(t, 'travelers', id)
 export const addPacking = (t, o) => listAdd(t, 'packing', { done: false, carry: true, ...o })
 export const updatePacking = (t, id, p) => listUpdate(t, 'packing', id, p)
 export const removePacking = (t, id) => listRemove(t, 'packing', id)
+
+export const addSettlement = (t, o) => listAdd(t, 'settlements', o)
+export const removeSettlement = (t, id) => listRemove(t, 'settlements', id)

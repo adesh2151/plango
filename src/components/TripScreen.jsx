@@ -74,9 +74,17 @@ export default function TripScreen({ tripId, onBack }) {
         </div>
         {(() => {
           const today = new Date().toISOString().slice(0, 10)
+          const out = []
+          if (trip.startDate) {
+            const diff = Math.round((new Date(trip.startDate + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000)
+            if (diff > 0) out.push(<div key="cd" className="countdown">🗓️ Starts in {diff} day{diff > 1 ? 's' : ''}</div>)
+            else if (diff === 0) out.push(<div key="cd" className="countdown" style={{ background: 'var(--good)' }}>🎒 Trip starts today!</div>)
+            else if (trip.endDate && trip.endDate >= today) out.push(<div key="cd" className="countdown" style={{ background: 'var(--good)' }}>✈️ On your trip now</div>)
+          }
           const sorted = [...trip.items].filter((i) => i.date).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
           const next = sorted.find((i) => i.date >= today) || sorted[0] || trip.items[0]
-          return next ? <div className="small soft" style={{ marginTop: 10, textAlign: 'center' }}>⏭️ Next: <b>{next.title}</b>{next.date ? ` · ${fmtDate(next.date)}` : ''}</div> : null
+          if (next) out.push(<div key="nx" className="small soft" style={{ marginTop: 8, textAlign: 'center' }}>⏭️ Next: <b>{next.title}</b>{next.date ? ` · ${fmtDate(next.date)}` : ''}</div>)
+          return out.length ? <div style={{ marginTop: 10, textAlign: 'center' }}>{out}</div> : null
         })()}
       </div>
 

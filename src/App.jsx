@@ -24,17 +24,28 @@ export default function App() {
   const [dest, setDest] = useState(null) // destination query string
   const [builder, setBuilder] = useState(null) // null | { query }
   const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine)
+  const [installEvt, setInstallEvt] = useState(null)
 
   useEffect(() => {
     const on = () => setOnline(true)
     const off = () => setOnline(false)
+    const install = (e) => { e.preventDefault(); setInstallEvt(e) }
     window.addEventListener('online', on)
     window.addEventListener('offline', off)
+    window.addEventListener('beforeinstallprompt', install)
     return () => {
       window.removeEventListener('online', on)
       window.removeEventListener('offline', off)
+      window.removeEventListener('beforeinstallprompt', install)
     }
   }, [])
+
+  const doInstall = async () => {
+    if (!installEvt) return
+    installEvt.prompt()
+    await installEvt.userChoice
+    setInstallEvt(null)
+  }
 
   const openTrip = (id) => { setDest(null); setBuilder(null); setTripId(id); setNav('trips') }
   const openDest = (q) => { setBuilder(null); setDest(q); window.scrollTo(0, 0) }
@@ -79,6 +90,12 @@ export default function App() {
       </header>
 
       {!online && <div className="offline-banner">📴 Offline — showing your saved trips &amp; last-seen data</div>}
+      {installEvt && (
+        <div className="update-banner">📲 Install PlanGo for offline, one-tap access
+          <button onClick={doInstall}>Install</button>
+          <button onClick={() => setInstallEvt(null)} style={{ marginLeft: 6 }}>✕</button>
+        </div>
+      )}
 
       {content}
 
