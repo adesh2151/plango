@@ -57,6 +57,8 @@ export async function nearby(lat, lon, category = 'attractions', radius = 5000) 
       phone: tags.phone || tags['contact:phone'] || '',
       wikipedia: tags.wikipedia || '',
       image: tags.image || '',
+      openingHours: tags.opening_hours || '',
+      fee: tags.fee || '',
       lat: el.lat || el.center?.lat,
       lon: el.lon || el.center?.lon,
     })

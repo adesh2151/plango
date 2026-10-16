@@ -74,6 +74,7 @@ export function createTrip(partial = {}) {
     items: [],
     expenses: [],
     favorites: [],
+    packing: [],
     createdAt: Date.now(),
   }
   set({ ...state, trips: [trip, ...state.trips] })
@@ -89,6 +90,30 @@ export function updateTrip(id, patch) {
 
 export function deleteTrip(id) {
   set({ ...state, trips: state.trips.filter((t) => t.id !== id) })
+}
+
+// Duplicate a whole trip (plan, expenses, favourites, packing) as a fresh,
+// independently editable copy — fresh ids throughout so nothing is shared.
+export function duplicateTrip(id) {
+  const t = getTrip(id)
+  if (!t) return null
+  const newId = uid()
+  const reId = (arr) => (arr || []).map((x) => ({ ...x, id: uid() }))
+  const copy = {
+    ...structuredClone(t),
+    id: newId,
+    name: `${t.name} (copy)`,
+    createdAt: Date.now(),
+    // Travellers keep their ids so expenses' paidBy/splitAmong stay valid.
+    travelers: structuredClone(t.travelers),
+    items: reId(t.items),
+    expenses: reId(t.expenses),
+    favorites: reId(t.favorites),
+    packing: reId(t.packing),
+    destinations: reId(t.destinations),
+  }
+  set({ ...state, trips: [copy, ...state.trips] })
+  return newId
 }
 
 export function getTrip(id) {
@@ -125,3 +150,7 @@ export const removeFavorite = (t, id) => listRemove(t, 'favorites', id)
 
 export const addTraveler = (t, name) => listAdd(t, 'travelers', { name })
 export const removeTraveler = (t, id) => listRemove(t, 'travelers', id)
+
+export const addPacking = (t, o) => listAdd(t, 'packing', { done: false, carry: true, ...o })
+export const updatePacking = (t, id, p) => listUpdate(t, 'packing', id, p)
+export const removePacking = (t, id) => listRemove(t, 'packing', id)

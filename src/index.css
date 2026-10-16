@@ -1,42 +1,63 @@
 :root {
-  --bg: #f0fbff;
-  --bg-soft: #e2f4fb;
+  --bg: #f3fbfe;
+  --bg-soft: #e5f3fb;
   --card: #ffffff;
-  --card-2: #f7fcfe;
-  --text: #0b2630;
-  --text-soft: #4a6670;
-  --muted: #7d949c;
-  --border: #d7e9f0;
-  --brand: #0e7490;
-  --brand-2: #0891b2;
+  --card-2: #f6fbfe;
+  --text: #0c2531;
+  --text-soft: #43626e;
+  --muted: #8097a0;
+  --border: #d9ebf2;
+  --brand: #0891b2;
+  --brand-2: #4f46e5;
+  --brand-3: #7c3aed;
   --brand-ink: #ffffff;
-  --accent: #f97316;
+  --accent: #fb7185;
+  --accent-2: #f59e0b;
+  --grad: linear-gradient(135deg, #06b6d4 0%, #3b82f6 55%, #7c3aed 100%);
+  --grad-soft: linear-gradient(135deg, #e0f7fb 0%, #eef0ff 100%);
   --good: #16a34a;
   --warn: #ca8a04;
-  --bad: #dc2626;
-  --shadow: 0 2px 10px rgba(14, 116, 144, 0.08);
-  --shadow-lg: 0 10px 30px rgba(14, 116, 144, 0.18);
-  --radius: 16px;
-  --radius-sm: 10px;
+  --bad: #ef4444;
+  --shadow: 0 4px 16px rgba(10, 80, 120, 0.08);
+  --shadow-lg: 0 16px 40px rgba(18, 70, 120, 0.22);
+  --radius: 18px;
+  --radius-sm: 12px;
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #071318;
-    --bg-soft: #0c1f27;
-    --card: #10242c;
-    --card-2: #0d1d24;
-    --text: #e6f6fb;
-    --text-soft: #a9c6cf;
-    --muted: #74939c;
-    --border: #1d3a44;
-    --brand: #22b8cf;
-    --brand-2: #38bdf8;
+    --bg: #060f16;
+    --bg-soft: #0e1f2b;
+    --card: #10222e;
+    --card-2: #0c1b25;
+    --text: #e8f7fc;
+    --text-soft: #aac8d3;
+    --muted: #7595a1;
+    --border: #1c3845;
+    --brand: #22d3ee;
+    --brand-2: #818cf8;
+    --brand-3: #a78bfa;
     --brand-ink: #04171d;
-    --shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 12px 34px rgba(0, 0, 0, 0.55);
+    --accent: #fb7185;
+    --accent-2: #fbbf24;
+    --grad: linear-gradient(135deg, #0891b2 0%, #4f46e5 55%, #9333ea 100%);
+    --grad-soft: linear-gradient(135deg, #0e2730 0%, #161a3a 100%);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
   }
+}
+
+/* soft ambient gradient wash behind everything */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20% -20% auto -20%;
+  height: 60vh;
+  background: radial-gradient(60% 60% at 20% 0%, color-mix(in srgb, var(--brand) 18%, transparent), transparent 70%),
+    radial-gradient(50% 50% at 90% 10%, color-mix(in srgb, var(--brand-3) 16%, transparent), transparent 70%);
+  z-index: -1;
+  pointer-events: none;
 }
 
 * {

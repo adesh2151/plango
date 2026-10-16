@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore, updateTrip, deleteTrip } from '../lib/store.js'
+import { useStore, updateTrip, deleteTrip, duplicateTrip } from '../lib/store.js'
 import { fmtDate, daysBetween, uid } from '../lib/format.js'
 import { Modal, Field, CountryPicker, CurrencyPicker } from './ui.jsx'
 import Plan from './Plan.jsx'
@@ -7,11 +7,14 @@ import Money from './Money.jsx'
 import Explore from './Explore.jsx'
 import Favorites from './Favorites.jsx'
 import Info from './Info.jsx'
+import Guide from './Guide.jsx'
+import { exportTripPdf } from '../lib/exportPdf.js'
 
 const TABS = [
   { key: 'plan', label: '🗓️ Plan' },
   { key: 'money', label: '💰 Money' },
   { key: 'explore', label: '🧭 Explore' },
+  { key: 'guide', label: '📋 Guide' },
   { key: 'fav', label: '❤️ Saved' },
   { key: 'info', label: '🛂 Visa & $' },
 ]
@@ -31,7 +34,10 @@ export default function TripScreen({ tripId, onBack }) {
     <div>
       <div className="row between" style={{ margin: '2px 0 10px' }}>
         <button className="iconbtn" onClick={onBack} aria-label="Back">←</button>
-        <button className="iconbtn" onClick={() => setEditing(true)} aria-label="Edit trip">⋯</button>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn sm" onClick={() => exportTripPdf(trip)}>📄 Export PDF</button>
+          <button className="iconbtn" onClick={() => setEditing(true)} aria-label="Edit trip">⋯</button>
+        </div>
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>
@@ -54,6 +60,7 @@ export default function TripScreen({ tripId, onBack }) {
       {tab === 'plan' && <Plan trip={trip} />}
       {tab === 'money' && <Money trip={trip} />}
       {tab === 'explore' && <Explore trip={trip} />}
+      {tab === 'guide' && <Guide trip={trip} />}
       {tab === 'fav' && <Favorites trip={trip} />}
       {tab === 'info' && <Info trip={trip} />}
 
@@ -91,6 +98,9 @@ function EditTripModal({ trip, onClose, onDeleted }) {
         </div>
       }
     >
+      <button className="btn block" style={{ marginBottom: 12 }} onClick={() => { duplicateTrip(trip.id); onClose(); onDeleted() }}>
+        🧬 Duplicate this trip (save as a reusable copy)
+      </button>
       <Field label="Trip name"><input className="input" value={f.name} onChange={(e) => upd('name', e.target.value)} /></Field>
       <div className="two">
         <Field label="Start"><input type="date" className="input" value={f.startDate} onChange={(e) => upd('startDate', e.target.value)} /></Field>

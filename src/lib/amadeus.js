@@ -54,6 +54,24 @@ export function createAmadeus({ id, secret, production = false }) {
       return (data.data || []).map((o) => normaliseOffer(o, dict))
     },
 
+    // "Where can I go within budget?" — live flight inspiration search.
+    async flightDestinations({ origin, maxPrice, departureDate, duration, oneWay, currency = 'USD' }) {
+      let path = `/v1/shopping/flight-destinations?origin=${origin}&currencyCode=${currency}`
+      if (maxPrice) path += `&maxPrice=${Math.round(maxPrice)}`
+      if (departureDate) path += `&departureDate=${departureDate}`
+      if (duration) path += `&duration=${duration}`
+      if (oneWay) path += `&oneWay=true`
+      const data = await authGet(path)
+      return (data.data || []).map((d) => ({
+        origin: d.origin,
+        destination: d.destination,
+        departureDate: d.departureDate,
+        returnDate: d.returnDate,
+        price: d.price?.total,
+        currency: data.meta?.currency || currency,
+      }))
+    },
+
     async hotelsByCity(cityCode) {
       const data = await authGet(
         `/v1/reference-data/locations/hotels/by-city?cityCode=${cityCode}`,

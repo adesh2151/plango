@@ -89,11 +89,13 @@ function PlaceCard({ place, trip, cityName, category }) {
         {(place.cuisine || place.stars) && (
           <div className="small muted">{[place.cuisine?.replace(/;/g, ', '), place.stars && `${place.stars}★`].filter(Boolean).join(' · ')}</div>
         )}
+        {place.openingHours && <div className="small muted">🕒 {place.openingHours}</div>}
+        {place.fee && <div className="small muted">🎫 {place.fee === 'yes' ? 'Entry fee' : place.fee === 'no' ? 'Free entry' : place.fee}</div>}
         <div className="act">
-          <button className="btn sm" disabled={saved} onClick={() => { addFavorite(trip.id, { name: place.name, type: place.kind || category, place: cityName, lat: place.lat, lon: place.lon, wikipedia: place.wikipedia, website: place.website }); setSaved(true) }}>
+          <button className="btn sm" disabled={saved} onClick={() => { addFavorite(trip.id, { name: place.name, type: place.kind || category, place: cityName, lat: place.lat, lon: place.lon, wikipedia: place.wikipedia, website: place.website, openingHours: place.openingHours, fee: place.fee }); setSaved(true) }}>
             {saved ? '♥ Saved' : '♡ Save'}
           </button>
-          <button className="btn sm" disabled={added} onClick={() => { addItem(trip.id, { type: planType, title: place.name, place: cityName, date: '', time: '', cost: '', currency: trip.baseCurrency }); setAdded(true) }}>
+          <button className="btn sm" disabled={added} onClick={() => { addItem(trip.id, { type: planType, title: place.name, place: cityName, date: '', time: '', cost: '', currency: trip.baseCurrency, notes: [place.openingHours && `Hours: ${place.openingHours}`, place.fee && `Fee: ${place.fee}`].filter(Boolean).join(' · ') }); setAdded(true) }}>
             {added ? '✓ Planned' : '＋ Plan'}
           </button>
           {place.website && <a className="btn sm ghost" href={place.website} target="_blank" rel="noreferrer">↗</a>}
