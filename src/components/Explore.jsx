@@ -3,7 +3,7 @@ import { useStore, addFavorite, addItem } from '../lib/store.js'
 import { explore, CATEGORIES } from '../lib/places.js'
 import { countryByCode } from '../lib/countries.js'
 import { createAmadeus } from '../lib/amadeus.js'
-import { PlaceImage, Loading, ErrorBox, Empty, Field } from './ui.jsx'
+import { PlaceImage, Loading, ErrorBox, Empty, Field, Toolbar } from './ui.jsx'
 import { money } from '../lib/format.js'
 import Favorites from './Favorites.jsx'
 
@@ -35,6 +35,9 @@ function Places({ trip }) {
   const [cat, setCat] = useState('attractions')
   const [state, setState] = useState({ loading: false, error: null, data: null })
   const touched = useRef(false)
+  const [resQ, setResQ] = useState('')
+  const [resSort, setResSort] = useState('default')
+  const [photosOnly, setPhotosOnly] = useState(false)
 
   // If the destination has no city, default the search to its capital so there
   // are actually attractions nearby (a country centroid usually has none).
@@ -86,16 +89,41 @@ function Places({ trip }) {
       <ErrorBox error={state.error} />
       {state.data && !state.data.results.length && <Empty icon="🔍" title="Nothing found here" hint="Try a different category or a nearby city." />}
 
-      {state.data && state.data.results.length > 0 && (
-        <>
-          <div className="places">
-            {state.data.results.map((p) => (
-              <PlaceCard key={p.id} place={p} trip={trip} cityName={q} category={cat} />
-            ))}
-          </div>
-          <div className="credit">Places © OpenStreetMap contributors · photos via Wikipedia</div>
-        </>
-      )}
+      {state.data && state.data.results.length > 0 && (() => {
+        let shown = state.data.results
+        if (resQ.trim()) {
+          const s = resQ.toLowerCase()
+          shown = shown.filter((p) => p.name.toLowerCase().includes(s) || (p.kind || '').toLowerCase().includes(s) || (p.cuisine || '').toLowerCase().includes(s))
+        }
+        if (photosOnly) shown = shown.filter((p) => p.image)
+        if (resSort === 'name') shown = [...shown].sort((a, b) => a.name.localeCompare(b.name))
+        return (
+          <>
+            <Toolbar
+              search={resQ}
+              onSearch={setResQ}
+              placeholder={`Search ${state.data.results.length} results…`}
+              sort={resSort}
+              onSort={setResSort}
+              sorts={[{ key: 'default', label: 'Best match' }, { key: 'name', label: 'A–Z' }]}
+            />
+            <div className="row wrap" style={{ marginBottom: 10 }}>
+              <span className={`chip ${photosOnly ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setPhotosOnly(!photosOnly)}>📷 With photos</span>
+              <span className="chip" style={{ pointerEvents: 'none' }}>{shown.length} shown</span>
+            </div>
+            {!shown.length ? (
+              <Empty icon="🔍" title="No matches" hint="Clear the search or filters." />
+            ) : (
+              <div className="places">
+                {shown.map((p) => (
+                  <PlaceCard key={p.id} place={p} trip={trip} cityName={q} category={cat} />
+                ))}
+              </div>
+            )}
+            <div className="credit">Places © OpenStreetMap contributors · photos via Wikipedia</div>
+          </>
+        )
+      })()}
     </div>
   )
 }

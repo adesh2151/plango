@@ -806,6 +806,46 @@ textarea.input {
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
 }
 
+/* ---------- toolbar (search + sort) ---------- */
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.searchwrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.searchwrap .input {
+  padding-left: 34px;
+  padding-right: 30px;
+}
+.searchwrap .searchico {
+  position: absolute;
+  left: 11px;
+  font-size: 13px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.searchwrap .searchclear {
+  position: absolute;
+  right: 8px;
+  border: none;
+  background: var(--border);
+  color: var(--text);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+}
+.sortsel {
+  max-width: 44%;
+  flex-shrink: 0;
+}
+
 .offline-banner {
   background: color-mix(in srgb, var(--warn) 18%, var(--card));
   border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useStore, createTrip, deleteTrip } from '../lib/store.js'
 import { fmtDate, daysBetween, uid } from '../lib/format.js'
 import { flagImg, allCountries } from '../lib/countries.js'
@@ -44,7 +44,16 @@ export default function Home({ onOpen, onStartTrip }) {
   const { trips, profile } = useStore()
   const [creating, setCreating] = useState(false)
   const [building, setBuilding] = useState(false)
+  const [tripSort, setTripSort] = useState('recent')
   const { data: countries } = useAsync(() => allCountries(), [])
+
+  const sortedTrips = useMemo(() => {
+    const arr = [...trips]
+    if (tripSort === 'name') arr.sort((a, b) => a.name.localeCompare(b.name))
+    else if (tripSort === 'upcoming') arr.sort((a, b) => (a.startDate || '9999').localeCompare(b.startDate || '9999'))
+    else arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    return arr
+  }, [trips, tripSort])
 
   if (building) return <TripBuilder profile={profile} onClose={() => setBuilding(false)} onCreated={(id) => { setBuilding(false); onOpen(id) }} />
 
@@ -92,10 +101,19 @@ export default function Home({ onOpen, onStartTrip }) {
       {/* YOUR TRIPS */}
       <div className="sec-head">
         <h3>🧳 Your trips</h3>
-        {trips.length > 0 && <button className="link" onClick={() => setCreating(true)}>＋ New</button>}
+        <div className="row" style={{ gap: 8 }}>
+          {trips.length > 1 && (
+            <select className="input" style={{ padding: '6px 8px', fontSize: 12.5, width: 'auto' }} value={tripSort} onChange={(e) => setTripSort(e.target.value)}>
+              <option value="recent">Recent</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="name">A–Z</option>
+            </select>
+          )}
+          {trips.length > 0 && <button className="link" onClick={() => setCreating(true)}>＋ New</button>}
+        </div>
       </div>
       {!trips.length && <Empty icon="🗺️" title="No trips yet" hint="Tap ‘Plan a trip’, or pick a destination above to start instantly." />}
-      {trips.map((t) => <TripCard key={t.id} t={t} onOpen={onOpen} />)}
+      {sortedTrips.map((t) => <TripCard key={t.id} t={t} onOpen={onOpen} />)}
 
       {creating && (
         <CreateTripModal

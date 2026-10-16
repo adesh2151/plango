@@ -57,6 +57,29 @@ export function Modal({ title, onClose, children, footer }) {
   )
 }
 
+// Reusable search + sort toolbar for list screens.
+export function Toolbar({ search, onSearch, placeholder = 'Search…', sort, onSort, sorts, children }) {
+  return (
+    <div className="toolbar">
+      {onSearch !== undefined && (
+        <div className="searchwrap grow">
+          <span className="searchico">🔍</span>
+          <input className="input" placeholder={placeholder} value={search} onChange={(e) => onSearch(e.target.value)} />
+          {search && <button className="searchclear" onClick={() => onSearch('')} aria-label="Clear">✕</button>}
+        </div>
+      )}
+      {sorts && (
+        <select className="input sortsel" value={sort} onChange={(e) => onSort(e.target.value)} aria-label="Sort">
+          {sorts.map((s) => (
+            <option key={s.key} value={s.key}>{s.label}</option>
+          ))}
+        </select>
+      )}
+      {children}
+    </div>
+  )
+}
+
 export function Field({ label, children }) {
   return (
     <div className="field">

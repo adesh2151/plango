@@ -1,9 +1,34 @@
 import { useState } from 'react'
 import { addFavorite, removeFavorite, addItem } from '../lib/store.js'
-import { PlaceImage, Empty, Modal, Field } from './ui.jsx'
+import { PlaceImage, Empty, Modal, Field, Toolbar } from './ui.jsx'
+
+const FAV_GROUPS = [
+  { key: 'all', label: 'All' },
+  { key: 'sight', label: '📸 Sights' },
+  { key: 'food', label: '🍽️ Food' },
+  { key: 'stay', label: '🏨 Stays' },
+  { key: 'other', label: '📌 Other' },
+]
+const favGroup = (t) => {
+  t = (t || '').toLowerCase()
+  if (/hotel|hostel|guest|motel|apartment|stay/.test(t)) return 'stay'
+  if (/restaurant|cafe|food|dish|bar|pub|fast_food/.test(t)) return 'food'
+  if (/spot|sight|attraction|museum|monument|temple|fort|park|view|art|zoo|gallery|church|mosque/.test(t)) return 'sight'
+  return 'other'
+}
 
 export default function Favorites({ trip }) {
   const [adding, setAdding] = useState(false)
+  const [q, setQ] = useState('')
+  const [ft, setFt] = useState('all')
+
+  let shown = trip.favorites
+  if (ft !== 'all') shown = shown.filter((f) => favGroup(f.type) === ft)
+  if (q.trim()) {
+    const s = q.toLowerCase()
+    shown = shown.filter((f) => f.name.toLowerCase().includes(s) || (f.place || '').toLowerCase().includes(s))
+  }
+
   return (
     <div>
       <div className="row between" style={{ margin: '4px 2px 10px' }}>
@@ -15,8 +40,19 @@ export default function Favorites({ trip }) {
         <Empty icon="❤️" title="No favourites yet" hint="Save places from Explore, or add a must-try dish or spot here." />
       )}
 
+      {trip.favorites.length > 3 && (
+        <>
+          <Toolbar search={q} onSearch={setQ} placeholder="Search saved…" />
+          <div className="row wrap" style={{ marginBottom: 10, gap: 6 }}>
+            {FAV_GROUPS.map((g) => (
+              <span key={g.key} className={`chip ${ft === g.key ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setFt(g.key)}>{g.label}</span>
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="places">
-        {trip.favorites.map((f) => (
+        {shown.map((f) => (
           <div className="place" key={f.id}>
             <PlaceImage query={`${f.name} ${f.place || ''}`} wikipedia={f.wikipedia} fallback={f.image}>
               {f.type && <span className="badge">{String(f.type).replace(/_/g, ' ')}</span>}

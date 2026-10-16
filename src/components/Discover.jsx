@@ -4,7 +4,7 @@ import { allCountries } from '../lib/countries.js'
 import { loadMatrix, classify, STATUS_META } from '../lib/visa.js'
 import { createAmadeus } from '../lib/amadeus.js'
 import { money, uid } from '../lib/format.js'
-import { PlaceImage, Loading, ErrorBox, Empty, Field, useAsync } from './ui.jsx'
+import { PlaceImage, Loading, ErrorBox, Empty, Field, useAsync, Toolbar } from './ui.jsx'
 import World from './World.jsx'
 
 const REGIONS = ['Africa', 'Americas', 'Asia', 'Europe', 'Oceania']
@@ -48,6 +48,8 @@ function ByVisa({ onStartTrip }) {
   const passport = profile.passportCca3
   const [region, setRegion] = useState('')
   const [filter, setFilter] = useState(passport ? 'freevoa' : 'any')
+  const [q, setQ] = useState('')
+  const [sort, setSort] = useState('name')
 
   const { data, loading, error } = useAsync(async () => {
     const [list, matrix] = await Promise.all([allCountries(), passport ? loadMatrix() : null])
@@ -66,6 +68,13 @@ function ByVisa({ onStartTrip }) {
     })
     .filter((c) => (data.row ? matchVisa(c.visa?.status, filter) : true))
 
+  let shown = results
+  if (q.trim()) {
+    const s = q.toLowerCase()
+    shown = shown.filter((c) => c.name.toLowerCase().includes(s) || (c.capital || '').toLowerCase().includes(s))
+  }
+  shown = [...shown].sort((a, b) => (sort === 'region' ? a.region.localeCompare(b.region) || a.name.localeCompare(b.name) : a.name.localeCompare(b.name)))
+
   return (
     <div>
       <div className="card">
@@ -83,13 +92,22 @@ function ByVisa({ onStartTrip }) {
           </Field>
         </div>
         {!passport && <div className="small muted">Set your passport in Settings to filter by visa ease.</div>}
-        <div className="small soft">{results.length} destinations match</div>
+        <div className="small soft">{shown.length} destinations match</div>
       </div>
 
-      {!results.length && <Empty icon="🗺️" title="No matches" hint="Try a different continent or loosen the visa filter." />}
+      <Toolbar
+        search={q}
+        onSearch={setQ}
+        placeholder="Search a country or capital…"
+        sort={sort}
+        onSort={setSort}
+        sorts={[{ key: 'name', label: 'A–Z' }, { key: 'region', label: 'By continent' }]}
+      />
+
+      {!shown.length && <Empty icon="🗺️" title="No matches" hint="Try a different continent, loosen the visa filter, or clear the search." />}
 
       <div className="places">
-        {results.slice(0, 60).map((c) => {
+        {shown.slice(0, 60).map((c) => {
           const meta = c.visa ? STATUS_META[c.visa.status] || STATUS_META.unknown : null
           return (
             <div className="place" key={c.cca3}>

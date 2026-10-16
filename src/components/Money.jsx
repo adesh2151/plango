@@ -10,6 +10,9 @@ const CATEGORIES = ['🍽️ Food', '🏨 Stay', '🚆 Transport', '🎟️ Acti
 export default function Money({ trip }) {
   const [editing, setEditing] = useState(null)
   const [managePeople, setManagePeople] = useState(false)
+  const [fPayer, setFPayer] = useState('all')
+  const [fCat, setFCat] = useState('all')
+  const [eSort, setESort] = useState('new')
   const base = trip.baseCurrency
 
   const { data: conv, loading, error } = useAsync(() => buildConverter(base), [base])
@@ -110,7 +113,37 @@ export default function Money({ trip }) {
 
       {!trip.expenses.length && <Empty icon="🧾" title="No expenses yet" hint="Log who paid for what and split it instantly." />}
 
-      {[...trip.expenses].reverse().map((e) => (
+      {trip.expenses.length > 2 && (
+        <>
+          <div className="row wrap" style={{ marginBottom: 8, gap: 6 }}>
+            <span className={`chip ${fPayer === 'all' ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setFPayer('all')}>Everyone</span>
+            {trip.travelers.map((t) => (
+              <span key={t.id} className={`chip ${fPayer === t.id ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setFPayer(t.id)}>{t.name}</span>
+            ))}
+          </div>
+          <div className="toolbar">
+            <select className="input" value={fCat} onChange={(e) => setFCat(e.target.value)}>
+              <option value="all">All categories</option>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select className="input sortsel" value={eSort} onChange={(e) => setESort(e.target.value)}>
+              <option value="new">Newest</option>
+              <option value="amount">Highest</option>
+              <option value="date">By date</option>
+            </select>
+          </div>
+        </>
+      )}
+
+      {(() => {
+        let shown = trip.expenses.map((e, i) => ({ ...e, _i: i, _base: conv ? conv.convert(e.amount, e.currency) ?? 0 : 0 }))
+        if (fPayer !== 'all') shown = shown.filter((e) => e.paidBy === fPayer)
+        if (fCat !== 'all') shown = shown.filter((e) => (e.category || '') === fCat)
+        if (eSort === 'amount') shown.sort((a, b) => b._base - a._base)
+        else if (eSort === 'date') shown.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+        else shown.sort((a, b) => b._i - a._i)
+        return shown
+      })().map((e) => (
         <div className="item" key={e.id} onClick={() => setEditing(e)}>
           <div className="emoji">{(e.category || '📌').split(' ')[0]}</div>
           <div className="grow">
