@@ -43,8 +43,9 @@ function matchesInterest(place, interests) {
 
 export async function generatePlan({ query, days = 3, interests = [], perDay = 3, allowRegion = true }) {
   // If this is a state/country, suggest cities to plan rather than guessing a
-  // centroid (which is usually empty countryside).
-  if (allowRegion) {
+  // centroid (which is usually empty countryside). A comma ("Pune, Maharashtra")
+  // means the user already named a specific city, so don't re-detect a region.
+  if (allowRegion && !query.includes(',')) {
     const cities = await getRegionCities(query)
     if (cities.length >= 3) return { region: true, place: query, cities }
   }

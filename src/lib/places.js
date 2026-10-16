@@ -37,7 +37,8 @@ export const CATEGORIES = {
 
 const WIKI_API = 'https://en.wikipedia.org/w/api.php'
 // Non-place articles that geosearch sometimes returns (events at a location).
-const NOT_A_PLACE = /\b(battle|rebellion|siege|war|uprising|massacre|treaty|election|incident|campaign|dynasty|constituency|parliamentary|legislative|assembly)\b/i
+const NOT_A_PLACE =
+  /\b(battle|rebellion|siege|war|uprising|massacre|treaty|election|incident|campaign|dynasty|constituency|parliamentary|legislative|assembly|school|college|university|institute|hospital|clinic|railway station|metro station|bus (stand|station)|airport|headquarters|company|bank)\b/i
 
 // Attractions near a point, straight from Wikipedia — fast, reliable CORS, and
 // each result already carries a photo + description. Great for sightseeing.
