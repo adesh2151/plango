@@ -170,7 +170,7 @@ export default function TripBuilder({ onClose, onCreated, profile, initialQuery 
           <input type="date" className="input" value={start} onChange={(e) => setStart(e.target.value)} />
         </Field>
 
-        <button className="btn primary block" onClick={generate} disabled={!query.trim()}>✨ Generate my plan</button>
+        <button className="btn primary block" onClick={() => generate()} disabled={!query.trim()}>✨ Generate my plan</button>
       </div>
 
       {state.loading && <Loading label="Building your day-by-day plan…" />}
@@ -235,7 +235,7 @@ export default function TripBuilder({ onClose, onCreated, profile, initialQuery 
             {aiBusy ? '✨ AI is optimising your plan…' : state.plan.ai ? '✨ Re-optimise with AI' : '✨ Optimise with AI (free · adds tips)'}
           </button>
           <div className="row" style={{ marginTop: 8 }}>
-            <button className="btn grow" onClick={generate}>🔀 Regenerate</button>
+            <button className="btn grow" onClick={() => generate()}>🔀 Regenerate</button>
             <button className="btn primary grow" onClick={save}>💾 Save as trip</button>
           </div>
           {state.plan.ai && <div className="credit">AI ordering & tips via Pollinations (open models) · places are real, from Wikipedia</div>}
