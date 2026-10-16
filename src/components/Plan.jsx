@@ -3,6 +3,7 @@ import { addItem, updateItem, removeItem } from '../lib/store.js'
 import { dateRange, fmtDate, money } from '../lib/format.js'
 import { legDurations, optimizeOrder } from '../lib/routing.js'
 import { Modal, Field, Empty } from './ui.jsx'
+import PlaceDetail from './PlaceDetail.jsx'
 
 function DayRoute({ trip, items }) {
   const withCoords = items.filter((i) => i.lat && i.lon)
@@ -50,6 +51,7 @@ const emojiFor = (t) => TYPES.find((x) => x.key === t)?.emoji || '📌'
 
 export default function Plan({ trip }) {
   const [editing, setEditing] = useState(null) // item or {date} for new
+  const [detail, setDetail] = useState(null) // item being viewed
   const days = useMemo(() => {
     const range = trip.startDate ? dateRange(trip.startDate, trip.endDate) : []
     return range.length ? range : ['unscheduled']
@@ -99,7 +101,7 @@ export default function Plan({ trip }) {
                 <button onClick={() => move(arr, idx, -1)} disabled={idx === 0} aria-label="Move up">▲</button>
                 <button onClick={() => move(arr, idx, 1)} disabled={idx === arr.length - 1} aria-label="Move down">▼</button>
               </div>
-              <div className="grow row" style={{ gap: 10 }} onClick={() => setEditing(it)}>
+              <div className="grow row" style={{ gap: 10 }} onClick={() => setDetail(it)}>
                 <div className="tcol">{it.time || '—'}</div>
                 <div className="emoji">{emojiFor(it.type)}</div>
                 <div className="grow">
@@ -111,6 +113,7 @@ export default function Plan({ trip }) {
                 </div>
                 {Number(it.cost) > 0 && <div className="small soft">{money(it.cost, it.currency || trip.baseCurrency)}</div>}
               </div>
+              <button className="btn sm ghost" onClick={() => setEditing(it)} aria-label="Edit">✎</button>
             </div>
           ))}
           {!(byDate[d] || []).length && <div className="muted small" style={{ padding: '2px 4px 8px' }}>Nothing planned.</div>}
@@ -124,6 +127,14 @@ export default function Plan({ trip }) {
           item={editing.id ? editing : null}
           initialDate={editing.date ?? ''}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {detail && (
+        <PlaceDetail
+          place={{ name: detail.title, lat: detail.lat, lon: detail.lon, kind: detail.type === 'transport' ? detail.mode : detail.place }}
+          onClose={() => setDetail(null)}
+          actions={<button className="btn primary block" onClick={() => { const it = detail; setDetail(null); setEditing(it) }}>✎ Edit this item</button>}
         />
       )}
     </div>

@@ -6,6 +6,7 @@ import { createAmadeus } from '../lib/amadeus.js'
 import { PlaceImage, Loading, ErrorBox, Empty, Field, Toolbar } from './ui.jsx'
 import { money } from '../lib/format.js'
 import Favorites from './Favorites.jsx'
+import PlaceDetail from './PlaceDetail.jsx'
 
 export default function Explore({ trip }) {
   const { settings } = useStore()
@@ -38,6 +39,7 @@ function Places({ trip }) {
   const [resQ, setResQ] = useState('')
   const [resSort, setResSort] = useState('default')
   const [photosOnly, setPhotosOnly] = useState(false)
+  const [detail, setDetail] = useState(null)
 
   // If the destination has no city, default the search to its capital so there
   // are actually attractions nearby (a country centroid usually has none).
@@ -116,7 +118,7 @@ function Places({ trip }) {
             ) : (
               <div className="places">
                 {shown.map((p) => (
-                  <PlaceCard key={p.id} place={p} trip={trip} cityName={q} category={cat} />
+                  <PlaceCard key={p.id} place={p} trip={trip} cityName={q} category={cat} onInfo={() => setDetail(p)} />
                 ))}
               </div>
             )}
@@ -124,21 +126,36 @@ function Places({ trip }) {
           </>
         )
       })()}
+
+      {detail && (
+        <PlaceDetail
+          place={detail}
+          onClose={() => setDetail(null)}
+          actions={
+            <div className="row">
+              <button className="btn grow" onClick={() => { addFavorite(trip.id, { name: detail.name, type: detail.kind || cat, place: q, lat: detail.lat, lon: detail.lon, wikipedia: detail.wikipedia, website: detail.website, openingHours: detail.openingHours, fee: detail.fee }); setDetail(null) }}>♡ Save</button>
+              <button className="btn primary grow" onClick={() => { addItem(trip.id, { type: cat === 'food' ? 'food' : cat === 'hotels' ? 'stay' : 'sight', title: detail.name, place: q, date: '', time: '', cost: '', currency: trip.baseCurrency, lat: detail.lat, lon: detail.lon }); setDetail(null) }}>＋ Add to plan</button>
+            </div>
+          }
+        />
+      )}
     </div>
   )
 }
 
-function PlaceCard({ place, trip, cityName, category }) {
+function PlaceCard({ place, trip, cityName, category, onInfo }) {
   const [saved, setSaved] = useState(false)
   const [added, setAdded] = useState(false)
   const planType = category === 'food' ? 'food' : category === 'hotels' ? 'stay' : 'sight'
   return (
     <div className="place">
-      <PlaceImage query={`${place.name} ${cityName.split(',')[0]}`} wikipedia={place.wikipedia} fallback={place.image}>
-        {place.kind && <span className="badge">{place.kind.replace(/_/g, ' ')}</span>}
-      </PlaceImage>
+      <div style={{ cursor: 'pointer' }} onClick={onInfo}>
+        <PlaceImage query={`${place.name} ${cityName.split(',')[0]}`} wikipedia={place.wikipedia} fallback={place.image}>
+          {place.kind && <span className="badge">{place.kind.replace(/_/g, ' ')}</span>}
+        </PlaceImage>
+      </div>
       <div className="pb">
-        <div className="nm">{place.name}</div>
+        <div className="nm" style={{ cursor: 'pointer' }} onClick={onInfo}>{place.name} <span className="muted" style={{ fontWeight: 400 }}>ⓘ</span></div>
         {(place.cuisine || place.stars) && (
           <div className="small muted">{[place.cuisine?.replace(/;/g, ', '), place.stars && `${place.stars}★`].filter(Boolean).join(' · ')}</div>
         )}

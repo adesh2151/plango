@@ -4,7 +4,7 @@ import { allCountries } from '../lib/countries.js'
 import { convertOne } from '../lib/currency.js'
 import { generatePlan, BUDGET_TIERS, BUDGET_SPLIT } from '../lib/itinerary.js'
 import { refineDays, pickCity as aiPickCity } from '../lib/ai.js'
-import { uid, fmtDate, money } from '../lib/format.js'
+import { uid, fmtDate, money, addDays } from '../lib/format.js'
 import { INTERESTS } from './Settings.jsx'
 import { PlaceImage, Loading, ErrorBox, Field, useAsync } from './ui.jsx'
 
@@ -19,11 +19,6 @@ const emojiFor = (kind = '') => {
   if (/museum|gallery|art/.test(k)) return '🖼️'
   if (/fort|palace|castle|monument/.test(k)) return '🏰'
   return '📸'
-}
-const addDays = (iso, n) => {
-  const d = new Date(iso + 'T00:00:00')
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
 }
 
 export default function TripBuilder({ onClose, onCreated, profile, initialQuery = '' }) {

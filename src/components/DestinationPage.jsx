@@ -9,6 +9,7 @@ import { getGallery } from '../lib/images.js'
 import { countryByCode, flagImg } from '../lib/countries.js'
 import { visaRequirement, STATUS_META } from '../lib/visa.js'
 import { PlaceImage, Loading, ErrorBox, Empty, useAsync } from './ui.jsx'
+import PlaceDetail from './PlaceDetail.jsx'
 
 const MapView = lazy(() => import('./MapView.jsx'))
 const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n)
@@ -16,6 +17,7 @@ const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n)
 export default function DestinationPage({ query, onBack, onOpenDest, onBuild, onStartTrip }) {
   const { profile, wishlist } = useStore()
   const passport = profile.passportCca3
+  const [detail, setDetail] = useState(null)
 
   const { data, loading, error } = useAsync(async () => {
     const region = await getRegionCities(query)
@@ -106,9 +108,10 @@ export default function DestinationPage({ query, onBack, onOpenDest, onBuild, on
         <Empty icon="🔍" title="Nothing listed here" hint="Try a nearby city." />
       ) : (
         <div className="places">
-          {things.map((t) => <ThingCard key={t.id} t={t} />)}
+          {things.map((t) => <ThingCard key={t.id} t={t} onOpen={() => setDetail(t)} />)}
         </div>
       )}
+      {detail && <PlaceDetail place={detail} onClose={() => setDetail(null)} />}
 
       <EatNearby lat={center.lat} lon={center.lon} />
       <GoodToKnow query={query} />

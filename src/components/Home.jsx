@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
-import { useStore, createTrip, deleteTrip } from '../lib/store.js'
+import { useStore, createTrip, deleteTrip, addItem } from '../lib/store.js'
 import { fmtDate, daysBetween, uid } from '../lib/format.js'
 import { flagImg, allCountries } from '../lib/countries.js'
 import { wikiNearby, reverseGeocode } from '../lib/places.js'
-import { Modal, Field, CountryPicker, CurrencyPicker, Empty, PlaceImage, useAsync } from './ui.jsx'
+import { TEMPLATES, buildTemplate } from '../lib/templates.js'
+import { Modal, Field, CountryPicker, CurrencyPicker, Empty, PlaceImage, Loading, useAsync } from './ui.jsx'
 
 const TRENDING = [
   { city: 'Paris', country: 'France' }, { city: 'Tokyo', country: 'Japan' }, { city: 'Bali', country: 'Indonesia' },
@@ -46,7 +47,31 @@ export default function Home({ onOpen, onOpenDest, onBuild, onStartTrip }) {
   const [search, setSearch] = useState('')
   const [theme, setTheme] = useState(null)
   const [tripSort, setTripSort] = useState('recent')
+  const [buildingTpl, setBuildingTpl] = useState(null)
   useAsync(() => allCountries(), []) // warm the country cache
+
+  const runTemplate = async (tpl) => {
+    setBuildingTpl(tpl.name)
+    try {
+      const { trip, items } = await buildTemplate(tpl, { interests: profile.interests || [], homeCurrency: profile.homeCurrency })
+      const id = createTrip(trip)
+      items.forEach((it) => addItem(id, it))
+      setBuildingTpl(null)
+      onOpen(id)
+    } catch {
+      setBuildingTpl(null)
+      alert('Could not build that trip right now — please try again.')
+    }
+  }
+
+  if (buildingTpl) {
+    return (
+      <div style={{ paddingTop: 60 }}>
+        <Loading label={`Building your ${buildingTpl} trip…`} />
+        <div className="muted small center" style={{ marginTop: 8 }}>Fetching live places for each city — a few seconds.</div>
+      </div>
+    )
+  }
 
   const sortedTrips = useMemo(() => {
     const arr = [...trips]
@@ -100,6 +125,17 @@ export default function Home({ onOpen, onOpenDest, onBuild, onStartTrip }) {
         </>
       ) : (
         <>
+          {/* READY-MADE TRIPS */}
+          <div className="sec-head"><h3>⚡ Ready-made trips</h3><span className="muted small">one tap, then tweak</span></div>
+          <Hrow>
+            {TEMPLATES.map((t) => (
+              <div className="dcard" key={t.key} onClick={() => runTemplate(t)}>
+                <PlaceImage query={`${t.cities[0].city} ${t.country}`} className="dimg" />
+                <div className="dmeta"><div className="t">{t.emoji} {t.name}</div><div className="s">{t.summary}</div></div>
+              </div>
+            ))}
+          </Hrow>
+
           {/* NEAR YOU */}
           <NearYou onOpenDest={onOpenDest} />
 

@@ -1,17 +1,21 @@
 // Small fetch helper: JSON, timeout, and a clear error message.
-export async function getJSON(url, { timeout = 15000, headers } = {}) {
-  const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort(), timeout)
-  try {
-    const res = await fetch(url, { signal: ctrl.signal, headers })
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${shortUrl(url)}`)
-    return await res.json()
-  } catch (err) {
-    if (err.name === 'AbortError') throw new Error(`Timed out contacting ${shortUrl(url)}`)
-    throw err
-  } finally {
-    clearTimeout(t)
+export async function getJSON(url, { timeout = 15000, headers, retries = 1 } = {}) {
+  let lastErr
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), timeout)
+    try {
+      const res = await fetch(url, { signal: ctrl.signal, headers })
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${shortUrl(url)}`)
+      return await res.json()
+    } catch (err) {
+      lastErr = err.name === 'AbortError' ? new Error(`Timed out contacting ${shortUrl(url)}`) : err
+      if (attempt < retries) await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+    } finally {
+      clearTimeout(t)
+    }
   }
+  throw lastErr
 }
 
 export async function postForm(url, body, { timeout = 15000, headers } = {}) {

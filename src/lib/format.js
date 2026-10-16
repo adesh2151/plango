@@ -25,17 +25,29 @@ export function fmtDate(iso) {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+// Add n days to a YYYY-MM-DD string (UTC-safe, no timezone drift).
+export function addDays(iso, n) {
+  const d = new Date(iso + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+// Today as YYYY-MM-DD (UTC).
+export function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
 // Inclusive list of ISO dates between start and end (YYYY-MM-DD strings).
 export function dateRange(start, end) {
   if (!start) return []
   const out = []
-  const d = new Date(start + 'T00:00:00')
-  const last = new Date((end || start) + 'T00:00:00')
+  const d = new Date(start + 'T00:00:00Z')
+  const last = new Date((end || start) + 'T00:00:00Z')
   if (isNaN(d) || isNaN(last) || last < d) return [start]
   let guard = 0
   while (d <= last && guard < 400) {
     out.push(d.toISOString().slice(0, 10))
-    d.setDate(d.getDate() + 1)
+    d.setUTCDate(d.getUTCDate() + 1)
     guard++
   }
   return out
